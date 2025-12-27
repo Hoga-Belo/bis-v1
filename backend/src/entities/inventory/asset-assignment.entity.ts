@@ -32,10 +32,20 @@ export class AssetAssignment extends BaseEntity {
   @Column({ name: 'handover_document_url', type: 'varchar', length: 255, nullable: true })
   handoverDocumentUrl: string | null;
 
-  @Column({ name: 'condition_on_handover', type: 'enum', enum: AssetCondition })
+  @Column({
+    name: 'condition_on_handover',
+    type: 'enum',
+    enum: AssetCondition,
+    default: AssetCondition.GOOD,
+  })
   conditionOnHandover: AssetCondition;
 
-  @Column({ name: 'condition_on_return', type: 'enum', enum: AssetCondition, nullable: true })
+  @Column({
+    name: 'condition_on_return',
+    type: 'enum',
+    enum: AssetCondition,
+    nullable: true,
+  })
   conditionOnReturn: AssetCondition | null;
 
   @Column({ type: 'text', nullable: true })

@@ -1,11 +1,5 @@
 import { DataSource } from 'typeorm';
-import {
-  Province,
-  BloodType,
-  Religion,
-  EducationLevel,
-  RelationshipType,
-} from '../entities';
+import { Province, BloodType, Religion, EducationLevel, RelationshipType } from '../entities';
 
 export async function seedMasterData(dataSource: DataSource): Promise<void> {
   console.log('Seeding master data...');

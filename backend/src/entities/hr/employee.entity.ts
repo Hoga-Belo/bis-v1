@@ -69,7 +69,12 @@ export class Employee extends BaseEntity {
   @JoinColumn({ name: 'religion_id' })
   religion: Religion;
 
-  @Column({ name: 'marital_status', type: 'enum', enum: MaritalStatus, default: MaritalStatus.SINGLE })
+  @Column({
+    name: 'marital_status',
+    type: 'enum',
+    enum: MaritalStatus,
+    default: MaritalStatus.SINGLE,
+  })
   maritalStatus: MaritalStatus;
 
   @Column({ name: 'phone_number', type: 'varchar', length: 20, nullable: true })
@@ -173,7 +178,12 @@ export class Employee extends BaseEntity {
   @Column({ name: 'resign_reason', type: 'text', nullable: true })
   resignReason: string | null;
 
-  @Column({ name: 'employee_status', type: 'enum', enum: EmployeeStatus, default: EmployeeStatus.ACTIVE })
+  @Column({
+    name: 'employee_status',
+    type: 'enum',
+    enum: EmployeeStatus,
+    default: EmployeeStatus.ACTIVE,
+  })
   employeeStatus: EmployeeStatus;
 
   // Payroll Information (Sensitive)

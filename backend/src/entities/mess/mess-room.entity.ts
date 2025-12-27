@@ -40,7 +40,13 @@ export class MessRoom extends BaseEntity {
   status: MessRoomStatus;
 
   @Column({ type: 'jsonb', nullable: true })
-  facilities: { ac?: boolean; bathroom?: boolean; tv?: boolean; wifi?: boolean; [key: string]: boolean | undefined } | null;
+  facilities: {
+    ac?: boolean;
+    bathroom?: boolean;
+    tv?: boolean;
+    wifi?: boolean;
+    [key: string]: boolean | undefined;
+  } | null;
 
   @OneToMany(() => MessOccupancy, (occupancy) => occupancy.messRoom)
   occupancies: MessOccupancy[];

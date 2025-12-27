@@ -55,5 +55,10 @@ export class Room extends BaseEntity {
   status: RoomStatus;
 
   @Column({ type: 'jsonb', nullable: true })
-  facilities: { ac?: boolean; projector?: boolean; whiteboard?: boolean; [key: string]: boolean | undefined } | null;
+  facilities: {
+    ac?: boolean;
+    projector?: boolean;
+    whiteboard?: boolean;
+    [key: string]: boolean | undefined;
+  } | null;
 }

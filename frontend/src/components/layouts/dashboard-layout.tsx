@@ -53,21 +53,13 @@ const navItems: NavItem[] = [
   // More nav items will be added as modules are implemented
 ];
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
+interface SidebarContentProps {
+  pathname: string;
+  onNavClick?: () => void;
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const pathname = usePathname();
-  const { user, logout } = useAuthStore();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const handleLogout = () => {
-    logout();
-    window.location.href = '/login';
-  };
-
-  const SidebarContent = () => (
+function SidebarContent({ pathname, onNavClick }: SidebarContentProps) {
+  return (
     <div className="flex flex-col h-full">
       <div className="p-6">
         <h1 className="text-xl font-bold">Bebang BIS</h1>
@@ -85,7 +77,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 ? 'bg-primary text-primary-foreground'
                 : 'hover:bg-muted'
             )}
-            onClick={() => setSidebarOpen(false)}
+            onClick={onNavClick}
           >
             {item.icon}
             {item.title}
@@ -94,19 +86,34 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </nav>
     </div>
   );
+}
+
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+}
+
+export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const pathname = usePathname();
+  const { user, logout } = useAuthStore();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/login';
+  };
 
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent side="left" className="p-0 w-64">
-          <SidebarContent />
+          <SidebarContent pathname={pathname} onNavClick={() => setSidebarOpen(false)} />
         </SheetContent>
       </Sheet>
 
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 border-r bg-card lg:block">
-        <SidebarContent />
+        <SidebarContent pathname={pathname} />
       </aside>
 
       {/* Main content */}

@@ -37,40 +37,115 @@ export async function seedHR(dataSource: DataSource): Promise<void> {
   const departmentRepo = dataSource.getRepository(Department);
   const departments = [
     // BOD Departments
-    { code: 'BOD-EXEC', name: 'Executive Office', divisionCode: 'BOD', description: 'Executive management' },
-    { code: 'BOD-SEC', name: 'Corporate Secretary', divisionCode: 'BOD', description: 'Corporate secretariat' },
+    {
+      code: 'BOD-EXEC',
+      name: 'Executive Office',
+      divisionCode: 'BOD',
+      description: 'Executive management',
+    },
+    {
+      code: 'BOD-SEC',
+      name: 'Corporate Secretary',
+      divisionCode: 'BOD',
+      description: 'Corporate secretariat',
+    },
 
     // Operations Departments
     { code: 'OPS-MINE', name: 'Mining', divisionCode: 'OPS', description: 'Mining operations' },
     { code: 'OPS-PROC', name: 'Processing', divisionCode: 'OPS', description: 'Ore processing' },
-    { code: 'OPS-MAINT', name: 'Maintenance', divisionCode: 'OPS', description: 'Equipment maintenance' },
-    { code: 'OPS-PLAN', name: 'Mine Planning', divisionCode: 'OPS', description: 'Mine planning and geology' },
+    {
+      code: 'OPS-MAINT',
+      name: 'Maintenance',
+      divisionCode: 'OPS',
+      description: 'Equipment maintenance',
+    },
+    {
+      code: 'OPS-PLAN',
+      name: 'Mine Planning',
+      divisionCode: 'OPS',
+      description: 'Mine planning and geology',
+    },
 
     // Finance Departments
     { code: 'FIN-ACC', name: 'Accounting', divisionCode: 'FIN', description: 'General accounting' },
     { code: 'FIN-TAX', name: 'Tax', divisionCode: 'FIN', description: 'Tax compliance' },
-    { code: 'FIN-TREAS', name: 'Treasury', divisionCode: 'FIN', description: 'Treasury management' },
-    { code: 'FIN-BUDGET', name: 'Budget & Control', divisionCode: 'FIN', description: 'Budget and cost control' },
+    {
+      code: 'FIN-TREAS',
+      name: 'Treasury',
+      divisionCode: 'FIN',
+      description: 'Treasury management',
+    },
+    {
+      code: 'FIN-BUDGET',
+      name: 'Budget & Control',
+      divisionCode: 'FIN',
+      description: 'Budget and cost control',
+    },
 
     // HR Departments
     { code: 'HR-REC', name: 'Recruitment', divisionCode: 'HR', description: 'Talent acquisition' },
-    { code: 'HR-COMP', name: 'Compensation & Benefits', divisionCode: 'HR', description: 'Payroll and benefits' },
-    { code: 'HR-DEV', name: 'Training & Development', divisionCode: 'HR', description: 'Employee development' },
-    { code: 'HR-GA', name: 'General Affairs', divisionCode: 'HR', description: 'General administration' },
+    {
+      code: 'HR-COMP',
+      name: 'Compensation & Benefits',
+      divisionCode: 'HR',
+      description: 'Payroll and benefits',
+    },
+    {
+      code: 'HR-DEV',
+      name: 'Training & Development',
+      divisionCode: 'HR',
+      description: 'Employee development',
+    },
+    {
+      code: 'HR-GA',
+      name: 'General Affairs',
+      divisionCode: 'HR',
+      description: 'General administration',
+    },
 
     // IT Departments
-    { code: 'IT-INF', name: 'Infrastructure', divisionCode: 'IT', description: 'IT infrastructure' },
-    { code: 'IT-APP', name: 'Applications', divisionCode: 'IT', description: 'Application development' },
-    { code: 'IT-SUP', name: 'IT Support', divisionCode: 'IT', description: 'IT helpdesk and support' },
+    {
+      code: 'IT-INF',
+      name: 'Infrastructure',
+      divisionCode: 'IT',
+      description: 'IT infrastructure',
+    },
+    {
+      code: 'IT-APP',
+      name: 'Applications',
+      divisionCode: 'IT',
+      description: 'Application development',
+    },
+    {
+      code: 'IT-SUP',
+      name: 'IT Support',
+      divisionCode: 'IT',
+      description: 'IT helpdesk and support',
+    },
 
     // Logistics Departments
-    { code: 'LOG-PROC', name: 'Procurement', divisionCode: 'LOG', description: 'Purchasing and procurement' },
+    {
+      code: 'LOG-PROC',
+      name: 'Procurement',
+      divisionCode: 'LOG',
+      description: 'Purchasing and procurement',
+    },
     { code: 'LOG-WH', name: 'Warehouse', divisionCode: 'LOG', description: 'Warehouse management' },
-    { code: 'LOG-TRANS', name: 'Transportation', divisionCode: 'LOG', description: 'Fleet and transportation' },
+    {
+      code: 'LOG-TRANS',
+      name: 'Transportation',
+      divisionCode: 'LOG',
+      description: 'Fleet and transportation',
+    },
 
     // HSE Departments
     { code: 'HSE-SAFE', name: 'Safety', divisionCode: 'HSE', description: 'Occupational safety' },
-    { code: 'HSE-ENV', name: 'Environment', divisionCode: 'HSE', description: 'Environmental management' },
+    {
+      code: 'HSE-ENV',
+      name: 'Environment',
+      divisionCode: 'HSE',
+      description: 'Environmental management',
+    },
     { code: 'HSE-HEALTH', name: 'Health', divisionCode: 'HSE', description: 'Occupational health' },
   ];
 
@@ -173,13 +248,25 @@ export async function seedHR(dataSource: DataSource): Promise<void> {
   const workLocationRepo = dataSource.getRepository(WorkLocation);
   const workLocations = [
     { code: 'HO-JKT', name: 'Head Office Jakarta', address: 'Jl. Sudirman No. 1, Jakarta Pusat' },
-    { code: 'SITE-KTM', name: 'Site Kalimantan Timur', address: 'Kecamatan Kutai, Kalimantan Timur' },
-    { code: 'SITE-KTB', name: 'Site Kalimantan Barat', address: 'Kecamatan Sanggau, Kalimantan Barat' },
+    {
+      code: 'SITE-KTM',
+      name: 'Site Kalimantan Timur',
+      address: 'Kecamatan Kutai, Kalimantan Timur',
+    },
+    {
+      code: 'SITE-KTB',
+      name: 'Site Kalimantan Barat',
+      address: 'Kecamatan Sanggau, Kalimantan Barat',
+    },
     { code: 'SITE-SLW', name: 'Site Sulawesi', address: 'Kecamatan Morowali, Sulawesi Tengah' },
     { code: 'SITE-PPU', name: 'Site Papua', address: 'Kabupaten Mimika, Papua' },
     { code: 'PORT-BJM', name: 'Port Banjarmasin', address: 'Pelabuhan Trisakti, Banjarmasin' },
     { code: 'PORT-SMD', name: 'Port Samarinda', address: 'Pelabuhan Samarinda, Kalimantan Timur' },
-    { code: 'WH-JKT', name: 'Warehouse Jakarta', address: 'Kawasan Industri Pulogadung, Jakarta Timur' },
+    {
+      code: 'WH-JKT',
+      name: 'Warehouse Jakarta',
+      address: 'Kawasan Industri Pulogadung, Jakarta Timur',
+    },
     { code: 'WH-SBY', name: 'Warehouse Surabaya', address: 'Kawasan Industri Rungkut, Surabaya' },
     { code: 'REMOTE', name: 'Remote/WFH', address: 'Work from home' },
   ];

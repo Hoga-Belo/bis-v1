@@ -25,9 +25,18 @@ export enum AuditAction {
 @Index(['tableName', 'recordId'])
 @Index(['userId', 'createdAt'])
 @Index(['action', 'createdAt'])
+@Index(['module', 'createdAt'])
 export class AuditLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  // Module (e.g., 'hr', 'inventory', 'mess', 'building')
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  module: string | null;
+
+  // Entity type (e.g., 'Employee', 'Asset', 'MessRoom')
+  @Column({ name: 'entity_type', type: 'varchar', length: 100, nullable: true })
+  entityType: string | null;
 
   @Column({ name: 'table_name', type: 'varchar', length: 100 })
   tableName: string;
@@ -37,6 +46,10 @@ export class AuditLog {
 
   @Column({ type: 'enum', enum: AuditAction })
   action: AuditAction;
+
+  // Description (5W1H context)
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
 
   @Column({ name: 'old_value', type: 'jsonb', nullable: true })
   oldValue: Record<string, unknown> | null;

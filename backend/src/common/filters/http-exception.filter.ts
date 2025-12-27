@@ -1,10 +1,4 @@
-import {
-  ExceptionFilter,
-  Catch,
-  ArgumentsHost,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ApiErrorResponse } from '../interfaces/api-response.interface';
 
@@ -29,7 +23,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       } else if (typeof exceptionResponse === 'object') {
         const responseObj = exceptionResponse as Record<string, unknown>;
         message = (responseObj.message as string) || message;
-        
+
         // Handle validation errors from class-validator
         if (Array.isArray(responseObj.message)) {
           errors = this.formatValidationErrors(responseObj.message as string[]);
@@ -56,12 +50,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
   private formatValidationErrors(messages: string[]): Record<string, string[]> {
     const errors: Record<string, string[]> = {};
-    
+
     messages.forEach((msg) => {
       // Try to extract field name from validation message
       const match = msg.match(/^(\w+)\s/);
       const field = match ? match[1].toLowerCase() : 'general';
-      
+
       if (!errors[field]) {
         errors[field] = [];
       }

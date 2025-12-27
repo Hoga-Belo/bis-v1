@@ -1,12 +1,6 @@
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import {
-  Role,
-  Permission,
-  RolePermission,
-  User,
-  UserRole,
-} from '../entities';
+import { Role, Permission, RolePermission, User, UserRole } from '../entities';
 
 export async function seedUserAccess(dataSource: DataSource): Promise<void> {
   console.log('Seeding user access data...');
@@ -14,16 +8,61 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
   // Seed Roles
   const roleRepo = dataSource.getRepository(Role);
   const roles = [
-    { code: 'SUPER_ADMIN', name: 'Super Administrator', description: 'Full system access', isSystem: true },
+    {
+      code: 'SUPER_ADMIN',
+      name: 'Super Administrator',
+      description: 'Full system access',
+      isSystem: true,
+    },
     { code: 'ADMIN', name: 'Administrator', description: 'Administrative access', isSystem: true },
-    { code: 'HR_MANAGER', name: 'HR Manager', description: 'HR module full access', isSystem: false },
-    { code: 'HR_STAFF', name: 'HR Staff', description: 'HR module limited access', isSystem: false },
-    { code: 'INVENTORY_MANAGER', name: 'Inventory Manager', description: 'Inventory module full access', isSystem: false },
-    { code: 'INVENTORY_STAFF', name: 'Inventory Staff', description: 'Inventory module limited access', isSystem: false },
-    { code: 'MESS_MANAGER', name: 'Mess Manager', description: 'Mess module full access', isSystem: false },
-    { code: 'MESS_STAFF', name: 'Mess Staff', description: 'Mess module limited access', isSystem: false },
-    { code: 'BUILDING_MANAGER', name: 'Building Manager', description: 'Building module full access', isSystem: false },
-    { code: 'BUILDING_STAFF', name: 'Building Staff', description: 'Building module limited access', isSystem: false },
+    {
+      code: 'HR_MANAGER',
+      name: 'HR Manager',
+      description: 'HR module full access',
+      isSystem: false,
+    },
+    {
+      code: 'HR_STAFF',
+      name: 'HR Staff',
+      description: 'HR module limited access',
+      isSystem: false,
+    },
+    {
+      code: 'INVENTORY_MANAGER',
+      name: 'Inventory Manager',
+      description: 'Inventory module full access',
+      isSystem: false,
+    },
+    {
+      code: 'INVENTORY_STAFF',
+      name: 'Inventory Staff',
+      description: 'Inventory module limited access',
+      isSystem: false,
+    },
+    {
+      code: 'MESS_MANAGER',
+      name: 'Mess Manager',
+      description: 'Mess module full access',
+      isSystem: false,
+    },
+    {
+      code: 'MESS_STAFF',
+      name: 'Mess Staff',
+      description: 'Mess module limited access',
+      isSystem: false,
+    },
+    {
+      code: 'BUILDING_MANAGER',
+      name: 'Building Manager',
+      description: 'Building module full access',
+      isSystem: false,
+    },
+    {
+      code: 'BUILDING_STAFF',
+      name: 'Building Staff',
+      description: 'Building module limited access',
+      isSystem: false,
+    },
     { code: 'EMPLOYEE', name: 'Employee', description: 'Basic employee access', isSystem: false },
   ];
 
@@ -40,7 +79,6 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
   // Seed Permissions
   const permissionRepo = dataSource.getRepository(Permission);
   const modules = ['hr', 'inventory', 'mess', 'building', 'user', 'report', 'audit'];
-  const features = ['employee', 'attendance', 'leave', 'stock', 'asset', 'room', 'occupancy', 'maintenance', 'role', 'permission', 'dashboard', 'log'];
   const actions = ['create', 'read', 'update', 'delete', 'export', 'import'];
 
   // Define module-feature mappings
@@ -54,7 +92,13 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
     audit: ['log', 'activity'],
   };
 
-  const permissions: { code: string; module: string; feature: string; action: string; description: string }[] = [];
+  const permissions: {
+    code: string;
+    module: string;
+    feature: string;
+    action: string;
+    description: string;
+  }[] = [];
   for (const module of modules) {
     const featuresForModule = moduleFeatures[module] || ['general'];
     for (const feature of featuresForModule) {
@@ -123,7 +167,10 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
   // Seed Role-Permission mappings for HR Manager (HR module full access)
   const hrManagerRole = savedRoles['HR_MANAGER'];
   for (const permission of Object.values(savedPermissions)) {
-    if (permission.module === 'hr' || (permission.module === 'report' && permission.feature === 'dashboard')) {
+    if (
+      permission.module === 'hr' ||
+      (permission.module === 'report' && permission.feature === 'dashboard')
+    ) {
       const exists = await rolePermissionRepo.findOne({
         where: { roleId: hrManagerRole.id, permissionId: permission.id },
       });
@@ -161,7 +208,10 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
   // Seed Role-Permission mappings for Inventory Manager
   const inventoryManagerRole = savedRoles['INVENTORY_MANAGER'];
   for (const permission of Object.values(savedPermissions)) {
-    if (permission.module === 'inventory' || (permission.module === 'report' && permission.feature === 'dashboard')) {
+    if (
+      permission.module === 'inventory' ||
+      (permission.module === 'report' && permission.feature === 'dashboard')
+    ) {
       const exists = await rolePermissionRepo.findOne({
         where: { roleId: inventoryManagerRole.id, permissionId: permission.id },
       });
@@ -199,7 +249,10 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
   // Seed Role-Permission mappings for Mess Manager
   const messManagerRole = savedRoles['MESS_MANAGER'];
   for (const permission of Object.values(savedPermissions)) {
-    if (permission.module === 'mess' || (permission.module === 'report' && permission.feature === 'dashboard')) {
+    if (
+      permission.module === 'mess' ||
+      (permission.module === 'report' && permission.feature === 'dashboard')
+    ) {
       const exists = await rolePermissionRepo.findOne({
         where: { roleId: messManagerRole.id, permissionId: permission.id },
       });
@@ -237,7 +290,10 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
   // Seed Role-Permission mappings for Building Manager
   const buildingManagerRole = savedRoles['BUILDING_MANAGER'];
   for (const permission of Object.values(savedPermissions)) {
-    if (permission.module === 'building' || (permission.module === 'report' && permission.feature === 'dashboard')) {
+    if (
+      permission.module === 'building' ||
+      (permission.module === 'report' && permission.feature === 'dashboard')
+    ) {
       const exists = await rolePermissionRepo.findOne({
         where: { roleId: buildingManagerRole.id, permissionId: permission.id },
       });

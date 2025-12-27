@@ -12,6 +12,15 @@ export enum OccupancyStatus {
 @Entity('mess_occupancies')
 @Index(['messRoomId', 'status'])
 @Index(['employeeId', 'status'])
+// Partial unique index: one active occupancy per employee
+@Index('idx_mess_occupancies_employee_active', ['employeeId'], {
+  unique: true,
+  where: `"status" = 'ACTIVE'`,
+})
+// Partial index for room active occupancies (for capacity queries)
+@Index('idx_mess_occupancies_room_active', ['messRoomId'], {
+  where: `"status" = 'ACTIVE'`,
+})
 export class MessOccupancy extends BaseEntity {
   @Column({ name: 'mess_room_id', type: 'uuid' })
   messRoomId: string;
