@@ -5,19 +5,19 @@ export * from './base/base.entity';
 export * from './master-data';
 
 // User Access
-// (will be added as entities are created)
+export * from './user-access';
 
 // HR
-// (will be added as entities are created)
+export * from './hr';
 
 // Inventory
-// (will be added as entities are created)
+export * from './inventory';
 
 // Building
-// (will be added as entities are created)
+export * from './building';
 
 // Mess
-// (will be added as entities are created)
+export * from './mess';
 
 // Audit
-// (will be added as entities are created)
+export * from './audit';
