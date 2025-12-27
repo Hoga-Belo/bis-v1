@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Maskable: content in center 410x410 circle -->
+  <!-- Simple logo: e.g., B text or Bebang BIS -->
+  <rect fill="#0f172a" width="512" height="512" rx="120"/>
+  <text x="256" y="290" font-size="48" fill="white" text-anchor="middle" font-weight="bold">BIS</text>
+</svg>
