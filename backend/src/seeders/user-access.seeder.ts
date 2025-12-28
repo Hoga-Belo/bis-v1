@@ -83,7 +83,18 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
 
   // Define module-feature mappings
   const moduleFeatures: Record<string, string[]> = {
-    hr: ['employee', 'attendance', 'leave', 'division', 'department', 'position'],
+    hr: [
+      'employee',
+      'attendance',
+      'leave',
+      'division',
+      'department',
+      'position',
+      'job-grade',
+      'employment-status',
+      'work-location',
+      'organization',
+    ],
     inventory: ['stock', 'asset', 'product', 'warehouse', 'category', 'brand'],
     mess: ['room', 'occupancy', 'site', 'block', 'floor'],
     building: ['building', 'room', 'maintenance', 'floor'],
