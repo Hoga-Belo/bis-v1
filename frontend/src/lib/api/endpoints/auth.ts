@@ -1,20 +1,36 @@
-import apiClient from '../client';
+import { apiClient } from '../client';
 import { ApiResponse } from '@/lib/types/api';
-import { LoginRequest, LoginResponse, User } from '@/lib/types/auth';
+import { LoginResponse, User } from '@/lib/types/auth';
+
+interface LoginRequest {
+  nik: string;
+  password: string;
+}
+
+interface ChangePasswordRequest {
+  oldPassword?: string;
+  newPassword: string;
+  confirmPassword: string;
+}
 
 export const authApi = {
-  login: async (credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> => {
-    const response = await apiClient.post<ApiResponse<LoginResponse>>('/auth/login', credentials);
-    return response.data;
+  login: async (data: LoginRequest): Promise<ApiResponse<LoginResponse>> => {
+    return apiClient.post('/auth/login', data);
   },
 
   getProfile: async (): Promise<ApiResponse<User>> => {
-    const response = await apiClient.get<ApiResponse<User>>('/auth/me');
-    return response.data;
+    return apiClient.get('/auth/me');
   },
 
-  logout: async (): Promise<void> => {
-    // Clear local storage/cookies - no API call needed for JWT
-    return Promise.resolve();
+  changePassword: async (data: ChangePasswordRequest): Promise<ApiResponse<{ message: string }>> => {
+    return apiClient.post('/auth/change-password', data);
+  },
+
+  refresh: async (refreshToken: string): Promise<ApiResponse<{ accessToken: string; refreshToken: string }>> => {
+    return apiClient.post('/auth/refresh', { refreshToken });
+  },
+
+  logout: async (refreshToken: string): Promise<ApiResponse<{ message: string }>> => {
+    return apiClient.post('/auth/logout', { refreshToken });
   },
 };

@@ -8,11 +8,12 @@ import { LoadingSpinner } from '@/components/shared/loading-spinner';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
+  const { isAuthenticated, isLoading, setLoading } = useAuthStore();
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    // Set loading to false after hydration
+    setLoading(false);
+  }, [setLoading]);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {

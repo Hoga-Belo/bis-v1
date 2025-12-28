@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
-import { useAuthStore } from '@/lib/stores/auth-store';
+import { useAuth } from '@/lib/hooks/use-auth';
 
 // Icons (using simple SVG for now)
 const MenuIcon = () => (
@@ -92,14 +92,21 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+// Key icon for change password
+const KeyIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" />
+  </svg>
+);
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
-  const { user, logout } = useAuthStore();
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
-    window.location.href = '/login';
   };
 
   return (
@@ -138,7 +145,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-10 w-10">
                   <AvatarFallback>
-                    {user?.nama?.charAt(0).toUpperCase() || 'U'}
+                    {user?.nik?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -146,13 +153,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user?.nama || 'User'}</p>
+                  <p className="text-sm font-medium leading-none">{user?.nik || 'User'}</p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    {user?.nik || 'NIK'}
+                    {user?.roles?.join(', ') || 'No roles'}
                   </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push('/change-password')}>
+                <KeyIcon />
+                <span className="ml-2">Ganti Password</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                 <LogOutIcon />
                 <span className="ml-2">Log out</span>

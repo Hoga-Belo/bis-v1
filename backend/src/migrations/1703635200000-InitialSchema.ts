@@ -41,6 +41,9 @@ export class InitialSchema1703635200000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Drop audit_logs module index
+    await queryRunner.query('DROP INDEX IF EXISTS "idx_audit_module_date"');
+
     // Drop partial unique indexes for mess_occupancies
     await queryRunner.query('DROP INDEX IF EXISTS "idx_mess_occupancies_employee_active"');
     await queryRunner.query('DROP INDEX IF EXISTS "idx_mess_occupancies_room_active"');
@@ -331,10 +334,11 @@ export class InitialSchema1703635200000 implements MigrationInterface {
 
   private async createAuditTable(qr: QueryRunner): Promise<void> {
     await qr.query(
-      'CREATE TABLE audit_logs (id uuid PRIMARY KEY DEFAULT uuid_generate_v4(), table_name varchar(100) NOT NULL, record_id uuid, action audit_action_enum NOT NULL, old_value jsonb, new_value jsonb, user_id uuid REFERENCES users(id), ip_address varchar(45), user_agent text, created_at TIMESTAMPTZ DEFAULT now())',
+      'CREATE TABLE audit_logs (id uuid PRIMARY KEY DEFAULT uuid_generate_v4(), module varchar(50), entity_type varchar(100), table_name varchar(100) NOT NULL, record_id uuid, action audit_action_enum NOT NULL, description text, old_value jsonb, new_value jsonb, user_id uuid REFERENCES users(id), ip_address varchar(45), user_agent text, created_at TIMESTAMPTZ DEFAULT now())',
     );
     await qr.query('CREATE INDEX idx_audit_table_record ON audit_logs (table_name, record_id)');
     await qr.query('CREATE INDEX idx_audit_user_date ON audit_logs (user_id, created_at)');
     await qr.query('CREATE INDEX idx_audit_action_date ON audit_logs (action, created_at)');
+    await qr.query('CREATE INDEX idx_audit_module_date ON audit_logs (module, created_at)');
   }
 }

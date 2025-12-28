@@ -1,6 +1,7 @@
-import { Entity, Column, OneToMany, Index } from 'typeorm';
+import { Entity, Column, OneToMany, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '../base/base.entity';
 import { UserRole } from './user-role.entity';
+import { Employee } from '../hr/employee.entity';
 
 @Entity('users')
 export class User extends BaseEntity {
@@ -22,6 +23,10 @@ export class User extends BaseEntity {
 
   @Column({ name: 'employee_id', type: 'uuid', nullable: true })
   employeeId: string | null;
+
+  @ManyToOne(() => Employee)
+  @JoinColumn({ name: 'employee_id' })
+  employee: Employee;
 
   @OneToMany(() => UserRole, (userRole) => userRole.user)
   userRoles: UserRole[];

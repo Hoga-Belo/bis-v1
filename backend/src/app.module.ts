@@ -1,7 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
+import { RolesModule } from './modules/roles/roles.module';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from './common/guards';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 
@@ -137,8 +142,21 @@ const entities = [
       inject: [ConfigService],
     }),
     AuthModule,
+    UsersModule,
+    RolesModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    // Global JWT Authentication Guard
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    // Global Permissions Guard
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
+    },
+  ],
 })
 export class AppModule {}

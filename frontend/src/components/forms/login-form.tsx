@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,19 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuthStore } from '@/lib/stores/auth-store';
+import { useAuth } from '@/lib/hooks/use-auth';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'NIK/Username is required'),
+  nik: z.string().min(1, 'NIK is required'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
-  const router = useRouter();
-  const { login } = useAuthStore();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,11 +36,13 @@ export function LoginForm() {
     setError(null);
 
     try {
-      await login(data);
-      router.push('/dashboard');
+      const success = await login(data.nik, data.password);
+      if (!success) {
+        setError('Login failed. Please check your credentials.');
+      }
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || 'Login failed. Please try again.');
+      const error = err as { message?: string };
+      setError(error.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -67,16 +67,16 @@ export function LoginForm() {
           )}
           
           <div className="space-y-2">
-            <Label htmlFor="username">NIK / Username</Label>
+            <Label htmlFor="nik">NIK</Label>
             <Input
-              id="username"
+              id="nik"
               type="text"
               placeholder="Enter your NIK"
-              {...register('username')}
+              {...register('nik')}
               disabled={isLoading}
             />
-            {errors.username && (
-              <p className="text-sm text-red-500">{errors.username.message}</p>
+            {errors.nik && (
+              <p className="text-sm text-red-500">{errors.nik.message}</p>
             )}
           </div>
 

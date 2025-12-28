@@ -1,25 +1,22 @@
 export interface User {
   id: string;
   nik: string;
-  nama: string;
   roles: string[];
-}
-
-export interface LoginRequest {
-  username: string;
-  password: string;
+  permissions: string[];
+  isFirstLogin: boolean;
+  lastLoginAt: string | null;
 }
 
 export interface LoginResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
+  accessToken: string;
+  refreshToken: string;
   user: User;
 }
 
 export interface AuthState {
   user: User | null;
-  token: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
