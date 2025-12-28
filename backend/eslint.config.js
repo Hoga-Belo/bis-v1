@@ -1,19 +1,26 @@
-import tseslint from 'typescript-eslint';
-import prettierConfig from 'eslint-config-prettier';
+// ESLint 9.x flat config for NestJS backend
+const tsParser = require('@typescript-eslint/parser');
+const tsPlugin = require('@typescript-eslint/eslint-plugin');
+const prettierConfig = require('eslint-config-prettier');
 
-export default tseslint.config(
-  ...tseslint.configs.recommended,
-  prettierConfig,
+module.exports = [
+  {
+    ignores: ['dist/**', 'node_modules/**'],
+  },
   {
     files: ['**/*.ts'],
     languageOptions: {
+      parser: tsParser,
       parserOptions: {
         project: './tsconfig.json',
-        tsconfigRootDir: import.meta.dirname,
         sourceType: 'module',
       },
     },
+    plugins: {
+      '@typescript-eslint': tsPlugin,
+    },
     rules: {
+      ...tsPlugin.configs.recommended.rules,
       '@typescript-eslint/interface-name-prefix': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
@@ -21,7 +28,5 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   },
-  {
-    ignores: ['dist/**', 'node_modules/**', 'eslint.config.mjs'],
-  },
-);
+  prettierConfig,
+];

@@ -39,16 +39,68 @@ Bebang BIS addresses the operational challenges of PT Prima Sarana Gemilang (Sit
 ## How It Should Work
 
 ### Authentication & Access Control
+
+#### Login Flow
 - Single sign-on with NIK (Employee ID) and password
-- Role-based access control with 11 predefined roles
-- Granular permissions for each module and action
-- Session management with JWT tokens
+- JWT-based authentication with access and refresh tokens
+- Automatic token refresh for seamless user experience
+- Secure password hashing with bcrypt
+
+#### First Login Flow
+- New users must change their password on first login
+- System detects first login via `is_first_login` flag
+- Redirects to change password page before accessing dashboard
+- Password must meet security requirements (min 8 chars, uppercase, lowercase, number, special char)
+
+#### Role-Based Access Control (RBAC)
+- **11 Predefined Roles**:
+  - Super Admin - Full system access
+  - Admin - Administrative functions
+  - HR Manager - HR module management
+  - HR Staff - HR data entry
+  - Inventory Manager - Inventory module management
+  - Inventory Staff - Inventory data entry
+  - Mess Manager - Mess module management
+  - Mess Staff - Mess data entry
+  - Building Manager - Building module management
+  - Building Staff - Building data entry
+  - Viewer - Read-only access
+
+- **Permission Structure**: Module-action based permissions
+  - Format: `module:entity:action`
+  - Examples: `user-access:user:create`, `hr:employee:read`, `inventory:product:update`
+  - Actions: create, read, update, delete
+
+- **Permission-based UI Rendering**:
+  - PermissionGate component for conditional rendering
+  - Navigation items shown/hidden based on user permissions
+  - Action buttons (edit, delete) only visible if user has permission
+  - usePermissions hook for programmatic permission checking
+
+#### Session Management
+- Access tokens with configurable expiration (default: 1 day)
+- Refresh tokens stored in database for secure rotation
+- Automatic token refresh on 401 responses
+- Logout clears all tokens and redirects to login
 
 ### Module Operations
 - **HR Module**: Complete employee lifecycle management from onboarding to offboarding
 - **Inventory Module**: Real-time inventory and stock tracking with transaction history
 - **Mess Module**: Automated mess occupancy management with availability dashboard
 - **Building Module**: Centralized maintenance request system with status tracking
+
+### User Management
+- Create, read, update, delete users
+- Assign multiple roles to users
+- Admin password reset functionality
+- Search and filter users with pagination
+- Soft delete for data recovery
+
+### Role Management
+- Create, read, update, delete roles
+- Assign permissions to roles via permission tree UI
+- Visual permission tree for easy management
+- Grouped permissions by module for clarity
 
 ### Audit & Compliance
 - Complete audit logging for all data changes
@@ -67,6 +119,7 @@ Bebang BIS addresses the operational challenges of PT Prima Sarana Gemilang (Sit
 - Consistent UI patterns across all modules
 - Fast search and filtering capabilities
 - Clear visual feedback for all actions (success, error, loading states)
+- Permission-based navigation - users only see what they can access
 
 ### Efficiency
 - Minimal clicks to complete common tasks
@@ -79,3 +132,4 @@ Bebang BIS addresses the operational challenges of PT Prima Sarana Gemilang (Sit
 - Graceful error handling with user-friendly messages
 - Automatic retry for failed operations
 - Data synchronization when coming back online
+- Automatic token refresh prevents session interruption

@@ -18,12 +18,12 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isLoading, user, hasAllPermissions, hasAnyPermission } =
+  const { isAuthenticated, isLoading, isHydrated, user, hasAllPermissions, hasAnyPermission } =
     useAuthStore();
 
   useEffect(() => {
     // Wait for hydration
-    if (isLoading) return;
+    if (!isHydrated) return;
 
     // Redirect to login if not authenticated
     if (!isAuthenticated) {
@@ -36,10 +36,10 @@ export function ProtectedRoute({
       router.replace('/change-password');
       return;
     }
-  }, [isAuthenticated, isLoading, user, router, pathname]);
+  }, [isAuthenticated, isHydrated, user, router, pathname]);
 
-  // Show loading while checking auth
-  if (isLoading) {
+  // Show loading while checking auth or hydrating
+  if (!isHydrated || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner size="lg" />

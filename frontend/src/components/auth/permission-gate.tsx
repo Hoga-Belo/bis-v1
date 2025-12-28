@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuthStore } from '@/lib/stores/auth-store';
+import { usePermissions } from '@/lib/hooks/use-permissions';
 
 interface PermissionGateProps {
   children: React.ReactNode;
@@ -15,11 +15,9 @@ export function PermissionGate({
   requireAll = true,
   fallback = null,
 }: PermissionGateProps) {
-  const { hasAllPermissions, hasAnyPermission } = useAuthStore();
+  const { canAll, canAny } = usePermissions();
 
-  const hasPermission = requireAll
-    ? hasAllPermissions(permissions)
-    : hasAnyPermission(permissions);
+  const hasPermission = requireAll ? canAll(permissions) : canAny(permissions);
 
   if (!hasPermission) {
     return <>{fallback}</>;

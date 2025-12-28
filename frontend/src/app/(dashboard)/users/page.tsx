@@ -15,6 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PermissionGate } from '@/components/auth/permission-gate';
+import { usePermissions } from '@/lib/hooks/use-permissions';
 import { UserTable } from '@/components/users/user-table';
 import { usersApi } from '@/lib/api/endpoints/users';
 import { rolesApi, Role } from '@/lib/api/endpoints/roles';
@@ -23,6 +24,7 @@ import { Plus, Search, X } from 'lucide-react';
 
 export default function UsersPage() {
   const router = useRouter();
+  const { can } = usePermissions();
   const [users, setUsers] = useState<UserListItem[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -132,10 +134,12 @@ export default function UsersPage() {
           </p>
         </div>
         <PermissionGate permissions={['user.user.create']}>
-          <Button onClick={() => router.push('/users/create')}>
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah User
-          </Button>
+          {can('user.user.create') && (
+            <Button onClick={() => router.push('/users/create')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah User
+            </Button>
+          )}
         </PermissionGate>
       </div>
 

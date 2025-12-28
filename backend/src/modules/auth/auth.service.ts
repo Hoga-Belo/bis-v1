@@ -106,10 +106,10 @@ export class AuthService {
    * @returns Access token, refresh token and user info
    */
   async login(loginDto: LoginDto, userAgent?: string, ipAddress?: string) {
-    const { username, password } = loginDto;
+    const { nik, password } = loginDto;
 
     // Validate credentials and get user from database
-    const user = await this.validateCredentials(username, password);
+    const user = await this.validateCredentials(nik, password);
 
     // Extract roles from user relations
     const roles = user.userRoles.map((ur) => ur.role.code);

@@ -8,8 +8,10 @@ interface AuthStore {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isHydrated: boolean;
   setAuth: (user: User, accessToken: string, refreshToken: string) => void;
   setLoading: (loading: boolean) => void;
+  hydrateComplete: () => void;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
   hasAnyPermission: (permissions: string[]) => boolean;
@@ -23,7 +25,8 @@ export const useAuthStore = create<AuthStore>()(
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
-      isLoading: true,
+      isLoading: false,
+      isHydrated: false,
 
       setAuth: (user, accessToken, refreshToken) =>
         set({
@@ -35,6 +38,8 @@ export const useAuthStore = create<AuthStore>()(
         }),
 
       setLoading: (loading) => set({ isLoading: loading }),
+
+      hydrateComplete: () => set({ isHydrated: true, isLoading: false }),
 
       logout: () =>
         set({
@@ -69,6 +74,9 @@ export const useAuthStore = create<AuthStore>()(
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.hydrateComplete();
+      },
     }
   )
 );

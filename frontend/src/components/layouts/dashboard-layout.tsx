@@ -50,6 +50,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
+  { title: 'Profil', href: '/profile', icon: <HomeIcon /> },
   // More nav items will be added as modules are implemented
 ];
 

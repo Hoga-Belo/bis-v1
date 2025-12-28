@@ -35,30 +35,33 @@
 |------|---------|---------|
 | Docker | latest | Containerization |
 | Docker Compose | latest | Multi-container orchestration |
-| ESLint | 9.x | Code linting (flat config format) |
+| ESLint | 9.x | Code linting (CommonJS flat config format) |
 | Prettier | 3.x | Code formatting |
 | TypeScript | 5.x | Static type checking |
 
 ## ESLint 9.x Configuration
 
-Both backend and frontend use ESLint 9.x with the new flat config format (`eslint.config.mjs`).
+Both backend and frontend use ESLint 9.x with the flat config format. **Important**: CommonJS format (`.js`) is used instead of ESM (`.mjs`) due to module resolution issues on Windows.
+
+### Why CommonJS Instead of ESM?
+
+ESM module resolution with `import.meta.dirname` and dynamic imports can cause issues on Windows environments. Using CommonJS format with `__dirname` provides better cross-platform compatibility.
 
 ### Backend ESLint Configuration
 ```javascript
-// backend/eslint.config.mjs
-import tsParser from '@typescript-eslint/parser';
-import tsPlugin from '@typescript-eslint/eslint-plugin';
-import prettierConfig from 'eslint-config-prettier';
-import prettierPlugin from 'eslint-plugin-prettier';
+// backend/eslint.config.js (CommonJS format)
+const tsParser = require('@typescript-eslint/parser');
+const tsPlugin = require('@typescript-eslint/eslint-plugin');
+const prettierPlugin = require('eslint-plugin-prettier');
 
-export default [
+module.exports = [
   {
     files: ['**/*.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
         project: './tsconfig.json',
-        tsconfigRootDir: import.meta.dirname,
+        tsconfigRootDir: __dirname,
         sourceType: 'module',
       },
     },
@@ -77,30 +80,27 @@ export default [
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'eslint.config.mjs'],
+    ignores: ['dist/**', 'node_modules/**', 'eslint.config.js'],
   },
 ];
 ```
 
 ### Frontend ESLint Configuration
 ```javascript
-// frontend/eslint.config.mjs
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+// frontend/eslint.config.js (CommonJS format)
+const { FlatCompat } = require('@eslint/eslintrc');
+const path = require('path');
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  globalIgnores([
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
-]);
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
 
-export default eslintConfig;
+module.exports = [
+  ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  {
+    ignores: ['.next/**', 'out/**', 'build/**', 'next-env.d.ts'],
+  },
+];
 ```
 
 ### Linting Commands
