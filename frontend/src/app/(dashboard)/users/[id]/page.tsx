@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { PermissionGate } from '@/components/auth/permission-gate';
+import { ViewHistoryButton } from '@/components/audit';
 import { RoleSelector } from '@/components/users/role-selector';
 import { usersApi } from '@/lib/api/endpoints/users';
 import { UserDetail } from '@/lib/types/user';
@@ -193,6 +194,13 @@ export default function UserDetailPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <PermissionGate permissions={['audit:log:read']}>
+              <ViewHistoryButton
+                tableName="users"
+                recordId={user.id}
+                entityName={user.nik}
+              />
+            </PermissionGate>
             <PermissionGate permissions={['user.user.update']}>
               <Button
                 variant="outline"

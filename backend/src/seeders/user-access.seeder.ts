@@ -104,7 +104,7 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
     for (const feature of featuresForModule) {
       for (const action of actions) {
         permissions.push({
-          code: `${module}.${feature}.${action}`,
+          code: `${module}:${feature}:${action}`,
           module,
           feature,
           action,

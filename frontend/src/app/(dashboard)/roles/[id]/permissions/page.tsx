@@ -10,6 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PermissionTree } from '@/components/roles/permission-tree';
+import { PermissionGate } from '@/components/auth/permission-gate';
+import { ViewHistoryButton } from '@/components/audit';
 import { rolesApi, RoleDetail, PermissionGroup } from '@/lib/api/endpoints/roles';
 
 export default function RolePermissionsPage() {
@@ -132,10 +134,19 @@ export default function RolePermissionsPage() {
             </p>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={isSaving}>
-          <Save className="mr-2 h-4 w-4" />
-          {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
-        </Button>
+        <div className="flex gap-2">
+          <PermissionGate permissions={['audit:log:read']}>
+            <ViewHistoryButton
+              tableName="role_permissions"
+              recordId={roleId}
+              entityName={`${role.name} Permissions`}
+            />
+          </PermissionGate>
+          <Button onClick={handleSave} disabled={isSaving}>
+            <Save className="mr-2 h-4 w-4" />
+            {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+          </Button>
+        </div>
       </div>
 
       <Card>

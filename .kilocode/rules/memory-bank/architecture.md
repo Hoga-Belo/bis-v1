@@ -47,11 +47,18 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/modules/users/dto/` | CreateUser, UpdateUser, AssignRoles, UserQuery DTOs |
 | `src/modules/roles/` | Role management (CRUD, permission assignment) |
 | `src/modules/roles/dto/` | CreateRole, UpdateRole, AssignPermissions DTOs |
+| `src/modules/audit/` | Audit logging (CRUD, record history) |
+| `src/modules/audit/audit.module.ts` | Audit module definition |
+| `src/modules/audit/audit.service.ts` | Audit logging service with createLog, findAll, findByRecord |
+| `src/modules/audit/audit.controller.ts` | Audit endpoints (GET /audit/logs, GET /audit/logs/:id, GET /audit/logs/record/:tableName/:recordId) |
+| `src/modules/audit/dto/` | AuditQuery, CreateAuditLog DTOs |
 | `src/common/` | Shared utilities, filters, interceptors, DTOs |
 | `src/common/decorators/` | Custom decorators (@RequirePermissions, @CurrentUser, @Public, @Match) |
 | `src/common/guards/` | PermissionsGuard for RBAC |
 | `src/common/filters/` | HttpExceptionFilter for error handling |
-| `src/common/interceptors/` | TransformInterceptor for response formatting |
+| `src/common/interceptors/` | TransformInterceptor, AuditInterceptor for response formatting and audit logging |
+| `src/common/utils/` | Utility functions |
+| `src/common/utils/audit.helper.ts` | Audit helper functions (extractEntityInfo, sanitizeValue, buildDescription, etc.) |
 | `src/config/` | Database, JWT, and other configurations |
 | `src/config/data-source.ts` | TypeORM DataSource configuration for CLI |
 | `src/migrations/` | TypeORM database migrations |
@@ -76,6 +83,7 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/app/(dashboard)/profile/` | User profile page |
 | `src/app/(dashboard)/users/` | User management pages (list, create, edit) |
 | `src/app/(dashboard)/roles/` | Role management pages (list, create, edit, permissions) |
+| `src/app/(dashboard)/audit/` | Audit trail page with filtering and pagination |
 | `src/components/` | React components |
 | `src/components/ui/` | Shadcn UI components |
 | `src/components/forms/` | Form components (LoginForm, ChangePasswordForm) |
@@ -84,9 +92,10 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/components/auth/` | Auth components (ProtectedRoute, PermissionGate) |
 | `src/components/users/` | User components (UserTable, UserForm, RoleSelector) |
 | `src/components/roles/` | Role components (RoleTable, RoleForm, PermissionTree) |
+| `src/components/audit/` | Audit components (AuditDetailDialog, AuditHistoryDialog, ViewHistoryButton) |
 | `src/lib/api/` | API client and endpoint definitions |
 | `src/lib/api/client.ts` | Axios client with interceptors |
-| `src/lib/api/endpoints/` | API endpoint functions (auth, users, roles) |
+| `src/lib/api/endpoints/` | API endpoint functions (auth, users, roles, audit) |
 | `src/lib/stores/` | Zustand state stores |
 | `src/lib/stores/auth-store.ts` | Authentication state with refresh token support |
 | `src/lib/hooks/` | Custom React hooks |
@@ -97,6 +106,7 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/lib/types/user.ts` | User management types |
 | `src/lib/types/role.ts` | Role management types |
 | `src/lib/types/api.ts` | API response types |
+| `src/lib/types/audit.ts` | Audit types (AuditLog, AuditAction, AuditQueryParams) |
 
 ## Key Technical Decisions
 
@@ -195,6 +205,7 @@ Page Component
     ├── API Client ─────────── endpoints/auth.ts
     │                          endpoints/users.ts
     │                          endpoints/roles.ts
+    │                          endpoints/audit.ts
     │                              │
     │                              └── client.ts (axios with interceptors)
     │                                    │

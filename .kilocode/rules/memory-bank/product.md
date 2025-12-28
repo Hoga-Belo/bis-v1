@@ -102,10 +102,15 @@ Bebang BIS addresses the operational challenges of PT Prima Sarana Gemilang (Sit
 - Visual permission tree for easy management
 - Grouped permissions by module for clarity
 
-### Audit & Compliance
-- Complete audit logging for all data changes
-- 5W1H context (Who, What, When, Where, Why, How) for each action
-- Soft delete pattern for data recovery and compliance
+### Audit Trail & Compliance
+- **Automatic Audit Logging**: Global interceptor captures all Create, Update, Delete operations
+- **5W1H Context**: Each log records Who (user), What (action), When (timestamp), Where (module/entity), Why (description), How (old/new values)
+- **Audit Log Viewer**: Dedicated page with filtering by module, action, date range, and user
+- **Record History**: View complete change history for any record via ViewHistoryButton component
+- **Sensitive Data Protection**: Automatic sanitization of passwords, tokens, and other sensitive fields
+- **Entity Mapping**: URL-to-entity mapping for accurate module and table identification
+- **Permission-based Access**: `audit:log:read` permission required to view audit logs
+- **Soft Delete Pattern**: Data recovery and compliance through soft delete
 
 ## User Experience Goals
 

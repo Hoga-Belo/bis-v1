@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RoleForm } from '@/components/roles/role-form';
+import { PermissionGate } from '@/components/auth/permission-gate';
+import { ViewHistoryButton } from '@/components/audit';
 import { rolesApi, RoleDetail } from '@/lib/api/endpoints/roles';
 import { CreateRoleRequest, UpdateRoleRequest } from '@/lib/types/role';
 
@@ -100,16 +102,25 @@ export default function EditRolePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/roles">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Edit Role</h1>
-          <p className="text-muted-foreground">Perbarui informasi role {role.name}</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/roles">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Edit Role</h1>
+            <p className="text-muted-foreground">Perbarui informasi role {role.name}</p>
+          </div>
         </div>
+        <PermissionGate permissions={['audit:log:read']}>
+          <ViewHistoryButton
+            tableName="roles"
+            recordId={role.id}
+            entityName={role.name}
+          />
+        </PermissionGate>
       </div>
 
       <Card>

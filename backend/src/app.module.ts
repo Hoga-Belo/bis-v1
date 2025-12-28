@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards';
+import { AuditInterceptor } from './common/interceptors';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 
@@ -144,6 +146,7 @@ const entities = [
     AuthModule,
     UsersModule,
     RolesModule,
+    AuditModule,
   ],
   controllers: [],
   providers: [
@@ -156,6 +159,11 @@ const entities = [
     {
       provide: APP_GUARD,
       useClass: PermissionsGuard,
+    },
+    // Global Audit Interceptor
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
     },
   ],
 })

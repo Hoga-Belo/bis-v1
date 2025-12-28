@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { usePermissions } from '@/lib/hooks/use-permissions';
 
 // Icons (using simple SVG for now)
 const MenuIcon = () => (
@@ -42,24 +43,70 @@ const LogOutIcon = () => (
   </svg>
 );
 
+// Users icon
+const UsersIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
+// Shield icon for roles
+const ShieldIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+  </svg>
+);
+
+// FileText icon for audit
+const FileTextIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+    <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+    <path d="M10 9H8" />
+    <path d="M16 13H8" />
+    <path d="M16 17H8" />
+  </svg>
+);
+
+// User icon for profile
+const UserIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
 interface NavItem {
   title: string;
   href: string;
   icon: React.ReactNode;
+  permission?: string;
 }
 
 const navItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
-  { title: 'Profil', href: '/profile', icon: <HomeIcon /> },
-  // More nav items will be added as modules are implemented
+  { title: 'Users', href: '/users', icon: <UsersIcon />, permission: 'user-access:user:read' },
+  { title: 'Roles', href: '/roles', icon: <ShieldIcon />, permission: 'user-access:role:read' },
+  { title: 'Audit Trail', href: '/audit', icon: <FileTextIcon />, permission: 'audit:log:read' },
+  { title: 'Profil', href: '/profile', icon: <UserIcon /> },
 ];
 
 interface SidebarContentProps {
   pathname: string;
   onNavClick?: () => void;
+  can: (permission: string) => boolean;
 }
 
-function SidebarContent({ pathname, onNavClick }: SidebarContentProps) {
+function SidebarContent({ pathname, onNavClick, can }: SidebarContentProps) {
+  // Filter nav items based on permissions
+  const visibleNavItems = navItems.filter((item) => {
+    if (!item.permission) return true;
+    return can(item.permission);
+  });
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-6">
@@ -68,7 +115,7 @@ function SidebarContent({ pathname, onNavClick }: SidebarContentProps) {
       </div>
       <Separator />
       <nav className="flex-1 p-4 space-y-2">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -104,6 +151,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { can } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
@@ -115,13 +163,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Mobile sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent side="left" className="p-0 w-64">
-          <SidebarContent pathname={pathname} onNavClick={() => setSidebarOpen(false)} />
+          <SidebarContent pathname={pathname} onNavClick={() => setSidebarOpen(false)} can={can} />
         </SheetContent>
       </Sheet>
 
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 border-r bg-card lg:block">
-        <SidebarContent pathname={pathname} />
+        <SidebarContent pathname={pathname} can={can} />
       </aside>
 
       {/* Main content */}

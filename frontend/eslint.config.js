@@ -1,19 +1,33 @@
 // ESLint 9.x flat config for Next.js
-// Using direct imports from eslint-config-next
+// Using @typescript-eslint directly
 
-const nextConfig = require("eslint-config-next");
+const tsParser = require("@typescript-eslint/parser");
+const tsPlugin = require("@typescript-eslint/eslint-plugin");
 
-const eslintConfig = [
+module.exports = [
   {
-    ignores: [".next/**", "out/**", "build/**", "node_modules/**"],
+    ignores: [".next/**", "out/**", "build/**", "node_modules/**", "*.config.js"],
   },
-  ...nextConfig,
   {
+    files: ["**/*.ts", "**/*.tsx"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tsPlugin,
+    },
     rules: {
+      ...tsPlugin.configs.recommended.rules,
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
       "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
 ];
-
-module.exports = eslintConfig;
