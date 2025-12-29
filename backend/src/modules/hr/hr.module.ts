@@ -8,6 +8,9 @@ import {
   EmploymentStatus,
   WorkLocation,
   Employee,
+  EmployeeFamily,
+  EmployeeEducation,
+  EmployeeDocument,
 } from '../../entities/hr';
 import { DivisionsModule } from './divisions/divisions.module';
 import { DepartmentsModule } from './departments/departments.module';
@@ -16,6 +19,7 @@ import { JobGradesModule } from './job-grades/job-grades.module';
 import { EmploymentStatusesModule } from './employment-statuses/employment-statuses.module';
 import { WorkLocationsModule } from './work-locations/work-locations.module';
 import { OrganizationModule } from './organization/organization.module';
+import { EmployeesModule } from './employees/employees.module';
 
 @Module({
   imports: [
@@ -27,6 +31,9 @@ import { OrganizationModule } from './organization/organization.module';
       EmploymentStatus,
       WorkLocation,
       Employee,
+      EmployeeFamily,
+      EmployeeEducation,
+      EmployeeDocument,
     ]),
     DivisionsModule,
     DepartmentsModule,
@@ -35,8 +42,7 @@ import { OrganizationModule } from './organization/organization.module';
     EmploymentStatusesModule,
     WorkLocationsModule,
     OrganizationModule,
-    // Future sub-modules will be added here:
-    // EmployeesModule,
+    EmployeesModule,
   ],
   exports: [
     DivisionsModule,
@@ -46,6 +52,7 @@ import { OrganizationModule } from './organization/organization.module';
     EmploymentStatusesModule,
     WorkLocationsModule,
     OrganizationModule,
+    EmployeesModule,
   ],
 })
 export class HrModule {}

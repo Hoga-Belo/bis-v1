@@ -48,15 +48,7 @@ export class JobGradesService {
 
     const queryBuilder = this.jobGradeRepository
       .createQueryBuilder('jobGrade')
-      .leftJoin(
-        'jobGrade.employees',
-        'employee',
-        'employee.deletedAt IS NULL AND employee.employeeStatus = :activeStatus',
-        { activeStatus: EmployeeStatus.ACTIVE },
-      )
-      .addSelect('COUNT(employee.id)', 'employeeCount')
-      .where('jobGrade.deletedAt IS NULL')
-      .groupBy('jobGrade.id');
+      .where('jobGrade.deletedAt IS NULL');
 
     if (search) {
       queryBuilder.andWhere(
@@ -66,18 +58,7 @@ export class JobGradesService {
     }
 
     // Get total count before pagination
-    const totalQueryBuilder = this.jobGradeRepository
-      .createQueryBuilder('jobGrade')
-      .where('jobGrade.deletedAt IS NULL');
-
-    if (search) {
-      totalQueryBuilder.andWhere(
-        '(jobGrade.code ILIKE :search OR jobGrade.name ILIKE :search)',
-        { search: `%${search}%` },
-      );
-    }
-
-    const total = await totalQueryBuilder.getCount();
+    const total = await queryBuilder.getCount();
 
     // Apply sorting and pagination
     const validSortFields = ['code', 'name', 'minSalary', 'maxSalary', 'createdAt'];
@@ -85,15 +66,37 @@ export class JobGradesService {
     queryBuilder.orderBy(`jobGrade.${sortField}`, sortOrder);
     queryBuilder.skip(skip).take(limit);
 
-    const rawResults = await queryBuilder.getRawAndEntities();
+    const jobGrades = await queryBuilder.getMany();
 
-    const data = rawResults.entities.map((jobGrade, index) => ({
+    // Get employee counts for each job grade using subquery
+    const jobGradeIds = jobGrades.map((jg) => jg.id);
+    const employeeCounts: Record<string, number> = {};
+
+    if (jobGradeIds.length > 0) {
+      const counts = await this.employeeRepository
+        .createQueryBuilder('employee')
+        .select('employee.jobGradeId', 'jobGradeId')
+        .addSelect('COUNT(employee.id)', 'count')
+        .where('employee.jobGradeId IN (:...jobGradeIds)', { jobGradeIds })
+        .andWhere('employee.deletedAt IS NULL')
+        .andWhere('employee.employeeStatus = :activeStatus', {
+          activeStatus: EmployeeStatus.ACTIVE,
+        })
+        .groupBy('employee.jobGradeId')
+        .getRawMany();
+
+      counts.forEach((c) => {
+        employeeCounts[c.jobGradeId] = parseInt(c.count, 10);
+      });
+    }
+
+    const data = jobGrades.map((jobGrade) => ({
       id: jobGrade.id,
       code: jobGrade.code,
       name: jobGrade.name,
       minSalary: jobGrade.minSalary ? Number(jobGrade.minSalary) : null,
       maxSalary: jobGrade.maxSalary ? Number(jobGrade.maxSalary) : null,
-      employeeCount: parseInt(rawResults.raw[index]?.employeeCount || '0', 10),
+      employeeCount: employeeCounts[jobGrade.id] || 0,
       createdAt: jobGrade.createdAt,
       updatedAt: jobGrade.updatedAt,
     }));

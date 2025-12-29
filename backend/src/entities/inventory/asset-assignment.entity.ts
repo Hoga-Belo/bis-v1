@@ -36,7 +36,7 @@ export class AssetAssignment extends BaseEntity {
     name: 'condition_on_handover',
     type: 'enum',
     enum: AssetCondition,
-    default: AssetCondition.GOOD,
+    enumName: 'asset_condition_enum',
   })
   conditionOnHandover: AssetCondition;
 
@@ -44,6 +44,7 @@ export class AssetAssignment extends BaseEntity {
     name: 'condition_on_return',
     type: 'enum',
     enum: AssetCondition,
+    enumName: 'asset_condition_enum',
     nullable: true,
   })
   conditionOnReturn: AssetCondition | null;

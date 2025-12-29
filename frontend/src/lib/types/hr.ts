@@ -225,3 +225,227 @@ export interface HrQueryParams {
 export interface DepartmentQueryParams extends HrQueryParams {
   divisionId?: string;
 }
+
+// Employee-related enums and types
+export type Gender = 'L' | 'P';
+export type MaritalStatus = 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED';
+export type EmployeeStatusType = 'ACTIVE' | 'ON_LEAVE' | 'RESIGNED' | 'TERMINATED';
+export type DocumentType = 'KTP' | 'KK' | 'IJAZAH' | 'SERTIFIKAT' | 'KONTRAK' | 'SK' | 'OTHER';
+
+// Master data types for dropdowns
+export interface BloodType {
+  id: string;
+  name: string;
+}
+
+export interface Religion {
+  id: string;
+  name: string;
+}
+
+export interface City {
+  id: string;
+  name: string;
+  province?: Province;
+}
+
+export interface Province {
+  id: string;
+  name: string;
+}
+
+export interface EducationLevel {
+  id: string;
+  name: string;
+  level: number;
+}
+
+export interface RelationshipType {
+  id: string;
+  name: string;
+}
+
+// Employee interfaces
+export interface Employee {
+  id: string;
+  nik: string;
+  fullName: string;
+  nickname?: string;
+  idCardNumber: string;
+  birthPlace: string;
+  birthDate: string;
+  gender: Gender;
+  bloodType?: BloodType;
+  religion?: Religion;
+  maritalStatus: MaritalStatus;
+  phoneNumber?: string;
+  email?: string;
+  photoUrl?: string;
+  address?: string;
+  city?: City;
+  postalCode?: string;
+  currentAddress?: string;
+  currentCity?: City;
+  division?: Division;
+  department?: Department;
+  position?: Position;
+  jobGrade?: JobGrade;
+  employmentStatus?: EmploymentStatus;
+  workLocation?: WorkLocation;
+  manager?: EmployeeSummary;
+  joinDate?: string;
+  permanentDate?: string;
+  contractStartDate?: string;
+  contractEndDate?: string;
+  resignDate?: string;
+  resignReason?: string;
+  employeeStatus: EmployeeStatusType;
+  basicSalary?: number | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankAccountHolder?: string | null;
+  taxNumber?: string | null;
+  bpjsKesehatan?: string | null;
+  bpjsKetenagakerjaan?: string | null;
+  annualLeaveBalance: number;
+  sickLeaveBalance: number;
+  families?: EmployeeFamily[];
+  educations?: EmployeeEducation[];
+  documents?: EmployeeDocument[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeFamily {
+  id: string;
+  relationshipType: RelationshipType;
+  fullName: string;
+  birthDate?: string;
+  gender?: Gender;
+  educationLevel?: EducationLevel;
+  occupation?: string;
+  isEmergencyContact: boolean;
+  phoneNumber?: string;
+}
+
+export interface EmployeeEducation {
+  id: string;
+  educationLevel: EducationLevel;
+  institutionName: string;
+  major?: string;
+  startYear: number;
+  endYear?: number;
+  gpa?: number;
+  certificateNumber?: string;
+  certificateUrl?: string;
+}
+
+export interface EmployeeDocument {
+  id: string;
+  documentType: DocumentType;
+  documentName: string;
+  fileUrl: string;
+  fileSize: number;
+  uploadedAt: string;
+}
+
+// Employee DTOs
+export interface CreateEmployeeDto {
+  nik: string;
+  fullName: string;
+  nickname?: string;
+  idCardNumber: string;
+  birthPlace: string;
+  birthDate: string;
+  gender: Gender;
+  bloodTypeId?: string;
+  religionId?: string;
+  maritalStatus: MaritalStatus;
+  phoneNumber?: string;
+  email?: string;
+  address?: string;
+  cityId?: string;
+  postalCode?: string;
+  currentAddress?: string;
+  currentCityId?: string;
+  divisionId: string;
+  departmentId: string;
+  positionId: string;
+  jobGradeId?: string;
+  employmentStatusId: string;
+  workLocationId?: string;
+  managerId?: string;
+  joinDate: string;
+  permanentDate?: string;
+  contractStartDate?: string;
+  contractEndDate?: string;
+  basicSalary?: number;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankAccountHolder?: string;
+  taxNumber?: string;
+  bpjsKesehatan?: string;
+  bpjsKetenagakerjaan?: string;
+}
+
+export interface UpdateEmployeeDto extends Partial<CreateEmployeeDto> {
+  employeeStatus?: EmployeeStatusType;
+  resignDate?: string;
+  resignReason?: string;
+}
+
+export interface EmployeeQueryParams extends HrQueryParams {
+  departmentId?: string;
+  divisionId?: string;
+  positionId?: string;
+  employeeStatus?: EmployeeStatusType;
+  gender?: Gender;
+  sortBy?: 'fullName' | 'nik' | 'joinDate';
+  sortOrder?: 'ASC' | 'DESC';
+}
+
+// Employee Family DTOs
+export interface CreateEmployeeFamilyDto {
+  relationshipTypeId: string;
+  fullName: string;
+  birthDate?: string;
+  gender?: Gender;
+  educationLevelId?: string;
+  occupation?: string;
+  isEmergencyContact?: boolean;
+  phoneNumber?: string;
+}
+
+export type UpdateEmployeeFamilyDto = Partial<CreateEmployeeFamilyDto>;
+
+// Employee Education DTOs
+export interface CreateEmployeeEducationDto {
+  educationLevelId: string;
+  institutionName: string;
+  major?: string;
+  startYear: number;
+  endYear?: number;
+  gpa?: number;
+  certificateNumber?: string;
+}
+
+export type UpdateEmployeeEducationDto = Partial<CreateEmployeeEducationDto>;
+
+// Employee Statistics for Dashboard
+export interface EmployeeStatistics {
+  totalActive: number;
+  newHiresThisMonth: number;
+  onLeave: number;
+  contractsExpiringSoon: number;
+}
+
+// Contract Expiring Employee for alerts
+export interface ContractExpiringEmployee {
+  id: string;
+  nik: string;
+  fullName: string;
+  contractEndDate: string;
+  division: { id: string; name: string } | null;
+  department: { id: string; name: string } | null;
+  position: { id: string; name: string } | null;
+}

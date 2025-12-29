@@ -27,6 +27,7 @@ import { Permission } from './entities/user-access/permission.entity';
 import { RolePermission } from './entities/user-access/role-permission.entity';
 import { User } from './entities/user-access/user.entity';
 import { UserRole } from './entities/user-access/user-role.entity';
+import { RefreshToken } from './entities/user-access/refresh-token.entity';
 
 // HR Entities
 import { Division } from './entities/hr/division.entity';
@@ -84,6 +85,7 @@ const entities = [
   RolePermission,
   User,
   UserRole,
+  RefreshToken,
   // HR
   Division,
   Department,

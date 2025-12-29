@@ -40,7 +40,7 @@ export default function RolesPage() {
           <h1 className="text-3xl font-bold tracking-tight">Role Management</h1>
           <p className="text-muted-foreground">Kelola role dan hak akses pengguna sistem</p>
         </div>
-        <PermissionGate permissions={['user.role.create']}>
+        <PermissionGate permissions={['user:role:create']}>
           <Link href="/roles/create">
             <Button>
               <Plus className="mr-2 h-4 w-4" />

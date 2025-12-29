@@ -41,15 +41,7 @@ export class EmploymentStatusesService {
 
     const queryBuilder = this.employmentStatusRepository
       .createQueryBuilder('employmentStatus')
-      .leftJoin(
-        'employmentStatus.employees',
-        'employee',
-        'employee.deletedAt IS NULL AND employee.employeeStatus = :activeStatus',
-        { activeStatus: EmployeeStatus.ACTIVE },
-      )
-      .addSelect('COUNT(employee.id)', 'employeeCount')
-      .where('employmentStatus.deletedAt IS NULL')
-      .groupBy('employmentStatus.id');
+      .where('employmentStatus.deletedAt IS NULL');
 
     if (search) {
       queryBuilder.andWhere(
@@ -59,18 +51,7 @@ export class EmploymentStatusesService {
     }
 
     // Get total count before pagination
-    const totalQueryBuilder = this.employmentStatusRepository
-      .createQueryBuilder('employmentStatus')
-      .where('employmentStatus.deletedAt IS NULL');
-
-    if (search) {
-      totalQueryBuilder.andWhere(
-        '(employmentStatus.code ILIKE :search OR employmentStatus.name ILIKE :search)',
-        { search: `%${search}%` },
-      );
-    }
-
-    const total = await totalQueryBuilder.getCount();
+    const total = await queryBuilder.getCount();
 
     // Apply sorting and pagination
     const validSortFields = ['code', 'name', 'createdAt'];
@@ -78,14 +59,38 @@ export class EmploymentStatusesService {
     queryBuilder.orderBy(`employmentStatus.${sortField}`, sortOrder);
     queryBuilder.skip(skip).take(limit);
 
-    const rawResults = await queryBuilder.getRawAndEntities();
+    const employmentStatuses = await queryBuilder.getMany();
 
-    const data = rawResults.entities.map((employmentStatus, index) => ({
+    // Get employee counts for each employment status using subquery
+    const employmentStatusIds = employmentStatuses.map((es) => es.id);
+    const employeeCounts: Record<string, number> = {};
+
+    if (employmentStatusIds.length > 0) {
+      const counts = await this.employeeRepository
+        .createQueryBuilder('employee')
+        .select('employee.employmentStatusId', 'employmentStatusId')
+        .addSelect('COUNT(employee.id)', 'count')
+        .where('employee.employmentStatusId IN (:...employmentStatusIds)', {
+          employmentStatusIds,
+        })
+        .andWhere('employee.deletedAt IS NULL')
+        .andWhere('employee.employeeStatus = :activeStatus', {
+          activeStatus: EmployeeStatus.ACTIVE,
+        })
+        .groupBy('employee.employmentStatusId')
+        .getRawMany();
+
+      counts.forEach((c) => {
+        employeeCounts[c.employmentStatusId] = parseInt(c.count, 10);
+      });
+    }
+
+    const data = employmentStatuses.map((employmentStatus) => ({
       id: employmentStatus.id,
       code: employmentStatus.code,
       name: employmentStatus.name,
       description: employmentStatus.description,
-      employeeCount: parseInt(rawResults.raw[index]?.employeeCount || '0', 10),
+      employeeCount: employeeCounts[employmentStatus.id] || 0,
       createdAt: employmentStatus.createdAt,
       updatedAt: employmentStatus.updatedAt,
     }));

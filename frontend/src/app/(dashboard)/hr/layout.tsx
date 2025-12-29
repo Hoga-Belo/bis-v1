@@ -7,6 +7,7 @@ import { PermissionGate } from '@/components/auth';
 import {
   Building2,
   Users,
+  UsersRound,
   Briefcase,
   GraduationCap,
   FileCheck,
@@ -16,46 +17,52 @@ import {
 
 const hrNavItems = [
   {
+    href: '/hr/employees',
+    label: 'Karyawan',
+    icon: UsersRound,
+    permission: 'hr:employee:read',
+  },
+  {
     href: '/hr/divisions',
     label: 'Divisi',
     icon: Building2,
-    permission: 'hr.division.read',
+    permission: 'hr:division:read',
   },
   {
     href: '/hr/departments',
     label: 'Departemen',
     icon: Users,
-    permission: 'hr.department.read',
+    permission: 'hr:department:read',
   },
   {
     href: '/hr/positions',
     label: 'Jabatan',
     icon: Briefcase,
-    permission: 'hr.position.read',
+    permission: 'hr:position:read',
   },
   {
     href: '/hr/job-grades',
     label: 'Golongan',
     icon: GraduationCap,
-    permission: 'hr.job-grade.read',
+    permission: 'hr:job-grade:read',
   },
   {
     href: '/hr/employment-statuses',
     label: 'Status Kepegawaian',
     icon: FileCheck,
-    permission: 'hr.employment-status.read',
+    permission: 'hr:employment-status:read',
   },
   {
     href: '/hr/work-locations',
     label: 'Lokasi Kerja',
     icon: MapPin,
-    permission: 'hr.work-location.read',
+    permission: 'hr:work-location:read',
   },
   {
     href: '/hr/organization',
     label: 'Struktur Organisasi',
     icon: Network,
-    permission: 'hr.organization.read',
+    permission: 'hr:organization:read',
   },
 ];
 

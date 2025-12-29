@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { ApiResponse } from '@/lib/types/api';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api/v1';
 
 // Flag to prevent multiple refresh requests
 let isRefreshing = false;
@@ -163,6 +163,13 @@ export const apiClient = {
 
   delete: <T>(url: string): Promise<ApiResponse<T>> =>
     axiosInstance.delete(url),
+
+  upload: <T>(url: string, formData: FormData): Promise<ApiResponse<T>> =>
+    axiosInstance.post(url, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
 };
 
 export default apiClient;

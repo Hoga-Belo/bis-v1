@@ -1,5 +1,6 @@
 declare module 'express' {
   import { IncomingMessage, ServerResponse } from 'http';
+  import { Socket } from 'net';
 
   export interface Request extends IncomingMessage {
     body: unknown;
@@ -9,6 +10,8 @@ declare module 'express' {
     method: string;
     headers: Record<string, string | string[] | undefined>;
     user?: unknown;
+    ip?: string;
+    socket?: Socket;
   }
 
   export interface Response extends ServerResponse {

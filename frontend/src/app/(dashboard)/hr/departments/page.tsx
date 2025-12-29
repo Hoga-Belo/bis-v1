@@ -38,8 +38,13 @@ export default function DepartmentsPage() {
     const fetchDivisions = async () => {
       try {
         const response = await divisionsApi.getAll({ limit: 100 });
-        if (response.success && response.data) {
-          setDivisions(response.data.data);
+        if (response.success) {
+          // Transform interceptor flattens { data, meta } to { success, data, meta }
+          // So response.data is the array and response.meta is at top level
+          const divisions = Array.isArray(response.data)
+            ? response.data
+            : (response.data as { data: Division[] })?.data ?? [];
+          setDivisions(divisions);
         }
       } catch (error) {
         console.error('Failed to fetch divisions:', error);
@@ -60,14 +65,22 @@ export default function DepartmentsPage() {
         sortOrder: 'ASC',
       };
       const response = await departmentsApi.getAll(params);
-      if (response.success && response.data) {
-        const responseData = response.data;
-        setDepartments(responseData.data);
-        setPagination((prev) => ({
-          ...prev,
-          total: responseData.meta.total,
-          totalPages: responseData.meta.totalPages,
-        }));
+      if (response.success) {
+        // Transform interceptor flattens { data, meta } to { success, data, meta }
+        // So response.data is the array and response.meta is at top level
+        const departments = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { data: Department[] })?.data ?? [];
+        const meta = (response as { meta?: { total: number; totalPages: number } }).meta;
+        
+        setDepartments(departments);
+        if (meta) {
+          setPagination((prev) => ({
+            ...prev,
+            total: meta.total,
+            totalPages: meta.totalPages,
+          }));
+        }
       }
     } catch (error) {
       toast.error('Gagal memuat data departemen');

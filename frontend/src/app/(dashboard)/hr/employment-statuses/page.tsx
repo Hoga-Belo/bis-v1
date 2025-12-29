@@ -27,10 +27,17 @@ export default function EmploymentStatusesPage() {
         limit: 10,
         search: search || undefined,
       });
-      if (response.success && response.data) {
-        setData(response.data.data);
-        if (response.data.meta) {
-          setTotalPages(response.data.meta.totalPages);
+      if (response.success) {
+        // Transform interceptor flattens { data, meta } to { success, data, meta }
+        // So response.data is the array and response.meta is at top level
+        const statuses = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { data: EmploymentStatus[] })?.data ?? [];
+        const meta = (response as { meta?: { totalPages: number } }).meta;
+        
+        setData(statuses);
+        if (meta) {
+          setTotalPages(meta.totalPages);
         }
       }
     } catch (error) {

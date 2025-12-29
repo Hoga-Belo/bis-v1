@@ -35,14 +35,22 @@ export default function PositionsPage() {
         sortOrder: 'ASC',
       };
       const response = await positionsApi.getAll(params);
-      if (response.success && response.data) {
-        const responseData = response.data;
-        setPositions(responseData.data);
-        setPagination((prev) => ({
-          ...prev,
-          total: responseData.meta.total,
-          totalPages: responseData.meta.totalPages,
-        }));
+      if (response.success) {
+        // Transform interceptor flattens { data, meta } to { success, data, meta }
+        // So response.data is the array and response.meta is at top level
+        const positions = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { data: Position[] })?.data ?? [];
+        const meta = (response as { meta?: { total: number; totalPages: number } }).meta;
+        
+        setPositions(positions);
+        if (meta) {
+          setPagination((prev) => ({
+            ...prev,
+            total: meta.total,
+            totalPages: meta.totalPages,
+          }));
+        }
       }
     } catch (error) {
       toast.error('Gagal memuat data jabatan');

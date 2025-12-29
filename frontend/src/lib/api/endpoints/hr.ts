@@ -24,10 +24,24 @@ import type {
   HrQueryParams,
   DepartmentQueryParams,
   EmployeeSummary,
+  Employee,
+  EmployeeFamily,
+  EmployeeEducation,
+  EmployeeDocument,
+  CreateEmployeeDto,
+  UpdateEmployeeDto,
+  EmployeeQueryParams,
+  CreateEmployeeFamilyDto,
+  UpdateEmployeeFamilyDto,
+  CreateEmployeeEducationDto,
+  UpdateEmployeeEducationDto,
+  DocumentType,
+  EmployeeStatistics,
+  ContractExpiringEmployee,
 } from '@/lib/types/hr';
 
 // Paginated response type for HR entities
-interface HrPaginatedResponse<T> {
+export interface HrPaginatedResponse<T> {
   data: T[];
   meta: {
     total: number;
@@ -262,6 +276,150 @@ export const organizationApi = {
   },
 };
 
+// Employees API
+export const employeesApi = {
+  getAll: async (
+    params?: EmployeeQueryParams
+  ): Promise<ApiResponse<HrPaginatedResponse<Employee>>> => {
+    return apiClient.get('/hr/employees', params as Record<string, unknown>);
+  },
+
+  getById: async (id: string): Promise<ApiResponse<Employee>> => {
+    return apiClient.get(`/hr/employees/${id}`);
+  },
+
+  create: async (data: CreateEmployeeDto): Promise<ApiResponse<Employee>> => {
+    return apiClient.post('/hr/employees', data);
+  },
+
+  update: async (
+    id: string,
+    data: UpdateEmployeeDto
+  ): Promise<ApiResponse<Employee>> => {
+    return apiClient.patch(`/hr/employees/${id}`, data);
+  },
+
+  delete: async (id: string): Promise<ApiResponse<void>> => {
+    return apiClient.delete(`/hr/employees/${id}`);
+  },
+
+  uploadPhoto: async (
+    id: string,
+    file: File
+  ): Promise<ApiResponse<{ photoUrl: string }>> => {
+    const formData = new FormData();
+    formData.append('photo', file);
+    return apiClient.upload(`/hr/employees/${id}/photo`, formData);
+  },
+
+  // Family members
+  getFamilies: async (
+    employeeId: string
+  ): Promise<ApiResponse<EmployeeFamily[]>> => {
+    return apiClient.get(`/hr/employees/${employeeId}/families`);
+  },
+
+  addFamily: async (
+    employeeId: string,
+    data: CreateEmployeeFamilyDto
+  ): Promise<ApiResponse<EmployeeFamily>> => {
+    return apiClient.post(`/hr/employees/${employeeId}/families`, data);
+  },
+
+  updateFamily: async (
+    employeeId: string,
+    familyId: string,
+    data: UpdateEmployeeFamilyDto
+  ): Promise<ApiResponse<EmployeeFamily>> => {
+    return apiClient.patch(
+      `/hr/employees/${employeeId}/families/${familyId}`,
+      data
+    );
+  },
+
+  deleteFamily: async (
+    employeeId: string,
+    familyId: string
+  ): Promise<ApiResponse<void>> => {
+    return apiClient.delete(`/hr/employees/${employeeId}/families/${familyId}`);
+  },
+
+  // Education records
+  getEducations: async (
+    employeeId: string
+  ): Promise<ApiResponse<EmployeeEducation[]>> => {
+    return apiClient.get(`/hr/employees/${employeeId}/educations`);
+  },
+
+  addEducation: async (
+    employeeId: string,
+    data: CreateEmployeeEducationDto
+  ): Promise<ApiResponse<EmployeeEducation>> => {
+    return apiClient.post(`/hr/employees/${employeeId}/educations`, data);
+  },
+
+  updateEducation: async (
+    employeeId: string,
+    educationId: string,
+    data: UpdateEmployeeEducationDto
+  ): Promise<ApiResponse<EmployeeEducation>> => {
+    return apiClient.patch(
+      `/hr/employees/${employeeId}/educations/${educationId}`,
+      data
+    );
+  },
+
+  deleteEducation: async (
+    employeeId: string,
+    educationId: string
+  ): Promise<ApiResponse<void>> => {
+    return apiClient.delete(
+      `/hr/employees/${employeeId}/educations/${educationId}`
+    );
+  },
+
+  // Documents
+  getDocuments: async (
+    employeeId: string
+  ): Promise<ApiResponse<EmployeeDocument[]>> => {
+    return apiClient.get(`/hr/employees/${employeeId}/documents`);
+  },
+
+  uploadDocument: async (
+    employeeId: string,
+    file: File,
+    documentType: DocumentType,
+    documentName: string
+  ): Promise<ApiResponse<EmployeeDocument>> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', documentType);
+    formData.append('documentName', documentName);
+    return apiClient.upload(`/hr/employees/${employeeId}/documents`, formData);
+  },
+
+  deleteDocument: async (
+    employeeId: string,
+    documentId: string
+  ): Promise<ApiResponse<void>> => {
+    return apiClient.delete(
+      `/hr/employees/${employeeId}/documents/${documentId}`
+    );
+  },
+
+  // Contract expiration
+  getExpiringContracts: async (
+    days: number = 30
+  ): Promise<ApiResponse<ContractExpiringEmployee[]>> => {
+    return apiClient.get('/hr/employees/contracts/expiring', { days });
+  },
+
+  // Statistics for dashboard
+  getStatistics: async (): Promise<ApiResponse<EmployeeStatistics>> => {
+    return apiClient.get('/hr/employees/statistics');
+  },
+};
+
 // Combined HR API export
 export const hrApi = {
   divisions: divisionsApi,
@@ -271,4 +429,5 @@ export const hrApi = {
   employmentStatuses: employmentStatusesApi,
   workLocations: workLocationsApi,
   organization: organizationApi,
+  employees: employeesApi,
 };

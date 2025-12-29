@@ -20,14 +20,26 @@ export class TransformInterceptor<T>
           return data;
         }
 
-        // Check if response includes pagination meta
-        if (data && typeof data === 'object' && 'items' in data && 'meta' in data) {
-          return {
-            success: true,
-            message: 'Success',
-            data: data.items,
-            meta: data.meta,
-          };
+        // Check if response includes pagination meta (supports both 'items' and 'data' keys)
+        if (data && typeof data === 'object' && 'meta' in data) {
+          // Handle { items, meta } format
+          if ('items' in data) {
+            return {
+              success: true,
+              message: 'Success',
+              data: data.items,
+              meta: data.meta,
+            };
+          }
+          // Handle { data, meta } format (e.g., from audit service)
+          if ('data' in data) {
+            return {
+              success: true,
+              message: 'Success',
+              data: data.data,
+              meta: data.meta,
+            };
+          }
         }
 
         return {

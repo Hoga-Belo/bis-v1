@@ -38,8 +38,8 @@ export default function UsersPage() {
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRoleId, setSelectedRoleId] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedRoleId, setSelectedRoleId] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
   const fetchUsers = useCallback(async (params?: UserQueryParams) => {
     setIsLoading(true);
@@ -85,11 +85,11 @@ export default function UsersPage() {
       params.search = searchQuery;
     }
 
-    if (selectedRoleId) {
+    if (selectedRoleId && selectedRoleId !== 'all') {
       params.roleId = selectedRoleId;
     }
 
-    if (selectedStatus !== '') {
+    if (selectedStatus && selectedStatus !== 'all') {
       params.isActive = selectedStatus === 'active';
     }
 
@@ -103,8 +103,8 @@ export default function UsersPage() {
 
   const handleClearFilters = () => {
     setSearchQuery('');
-    setSelectedRoleId('');
-    setSelectedStatus('');
+    setSelectedRoleId('all');
+    setSelectedStatus('all');
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
@@ -117,12 +117,12 @@ export default function UsersPage() {
       page: pagination.page,
       limit: pagination.limit,
       search: searchQuery || undefined,
-      roleId: selectedRoleId || undefined,
-      isActive: selectedStatus !== '' ? selectedStatus === 'active' : undefined,
+      roleId: selectedRoleId !== 'all' ? selectedRoleId : undefined,
+      isActive: selectedStatus !== 'all' ? selectedStatus === 'active' : undefined,
     });
   };
 
-  const hasActiveFilters = searchQuery || selectedRoleId || selectedStatus !== '';
+  const hasActiveFilters = searchQuery || selectedRoleId !== 'all' || selectedStatus !== 'all';
 
   return (
     <div className="space-y-6">
@@ -133,8 +133,8 @@ export default function UsersPage() {
             Kelola user dan hak akses sistem
           </p>
         </div>
-        <PermissionGate permissions={['user.user.create']}>
-          {can('user.user.create') && (
+        <PermissionGate permissions={['user:user:create']}>
+          {can('user:user:create') && (
             <Button onClick={() => router.push('/users/create')}>
               <Plus className="mr-2 h-4 w-4" />
               Tambah User
@@ -172,7 +172,7 @@ export default function UsersPage() {
                       <SelectValue placeholder="Semua Role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Semua Role</SelectItem>
+                      <SelectItem value="all">Semua Role</SelectItem>
                       {roles.map((role) => (
                         <SelectItem key={role.id} value={role.id}>
                           {role.name}
@@ -188,7 +188,7 @@ export default function UsersPage() {
                     <SelectValue placeholder="Semua Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Semua Status</SelectItem>
+                    <SelectItem value="all">Semua Status</SelectItem>
                     <SelectItem value="active">Aktif</SelectItem>
                     <SelectItem value="inactive">Nonaktif</SelectItem>
                   </SelectContent>

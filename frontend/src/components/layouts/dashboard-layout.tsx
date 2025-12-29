@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -15,6 +16,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { usePermissions } from '@/lib/hooks/use-permissions';
@@ -43,7 +49,6 @@ const LogOutIcon = () => (
   </svg>
 );
 
-// Users icon
 const UsersIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -53,14 +58,12 @@ const UsersIcon = () => (
   </svg>
 );
 
-// Shield icon for roles
 const ShieldIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
   </svg>
 );
 
-// FileText icon for audit
 const FileTextIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
@@ -71,7 +74,6 @@ const FileTextIcon = () => (
   </svg>
 );
 
-// User icon for profile
 const UserIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
@@ -79,17 +81,63 @@ const UserIcon = () => (
   </svg>
 );
 
-interface NavItem {
+const Building2Icon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+    <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+    <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+    <path d="M10 6h4" />
+    <path d="M10 10h4" />
+    <path d="M10 14h4" />
+    <path d="M10 18h4" />
+  </svg>
+);
+
+const ChevronDownIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+const KeyIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" />
+  </svg>
+);
+
+interface NavSubItem {
   title: string;
   href: string;
+  permission?: string;
+}
+
+interface NavItem {
+  title: string;
+  href?: string;
   icon: React.ReactNode;
   permission?: string;
+  children?: NavSubItem[];
 }
 
 const navItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
-  { title: 'Users', href: '/users', icon: <UsersIcon />, permission: 'user-access:user:read' },
-  { title: 'Roles', href: '/roles', icon: <ShieldIcon />, permission: 'user-access:role:read' },
+  { title: 'Users', href: '/users', icon: <UsersIcon />, permission: 'user:user:read' },
+  { title: 'Roles', href: '/roles', icon: <ShieldIcon />, permission: 'user:role:read' },
+  {
+    title: 'HR',
+    icon: <Building2Icon />,
+    permission: 'hr:employee:read',
+    children: [
+      { title: 'Divisions', href: '/hr/divisions', permission: 'hr:division:read' },
+      { title: 'Departments', href: '/hr/departments', permission: 'hr:department:read' },
+      { title: 'Positions', href: '/hr/positions', permission: 'hr:position:read' },
+      { title: 'Job Grades', href: '/hr/job-grades', permission: 'hr:job-grade:read' },
+      { title: 'Employment Statuses', href: '/hr/employment-statuses', permission: 'hr:employment-status:read' },
+      { title: 'Work Locations', href: '/hr/work-locations', permission: 'hr:work-location:read' },
+      { title: 'Organization', href: '/hr/organization', permission: 'hr:organization:read' },
+      { title: 'Employees', href: '/hr/employees', permission: 'hr:employee:read' },
+    ],
+  },
   { title: 'Audit Trail', href: '/audit', icon: <FileTextIcon />, permission: 'audit:log:read' },
   { title: 'Profil', href: '/profile', icon: <UserIcon /> },
 ];
@@ -101,11 +149,28 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({ pathname, onNavClick, can }: SidebarContentProps) {
-  // Filter nav items based on permissions
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
+    HR: pathname.startsWith('/hr'),
+  });
+
   const visibleNavItems = navItems.filter((item) => {
     if (!item.permission) return true;
     return can(item.permission);
   });
+
+  const toggleMenu = (title: string) => {
+    setOpenMenus((prev) => ({
+      ...prev,
+      [title]: !prev[title],
+    }));
+  };
+
+  const isActiveRoute = (href: string) => {
+    if (href === '/dashboard') {
+      return pathname === '/dashboard';
+    }
+    return pathname.startsWith(href);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -114,23 +179,86 @@ function SidebarContent({ pathname, onNavClick, can }: SidebarContentProps) {
         <p className="text-sm text-muted-foreground">PT Prima Sarana Gemilang</p>
       </div>
       <Separator />
-      <nav className="flex-1 p-4 space-y-2">
-        {visibleNavItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-              pathname === item.href
-                ? 'bg-primary text-primary-foreground'
-                : 'hover:bg-muted'
-            )}
-            onClick={onNavClick}
-          >
-            {item.icon}
-            {item.title}
-          </Link>
-        ))}
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        {visibleNavItems.map((item) => {
+          if (item.children) {
+            const visibleChildren = item.children.filter((child) => {
+              if (!child.permission) return true;
+              return can(child.permission);
+            });
+
+            if (visibleChildren.length === 0) return null;
+
+            const isOpen = openMenus[item.title] || false;
+            const hasActiveChild = visibleChildren.some((child) =>
+              isActiveRoute(child.href)
+            );
+
+            return (
+              <Collapsible
+                key={item.title}
+                open={isOpen}
+                onOpenChange={() => toggleMenu(item.title)}
+              >
+                <CollapsibleTrigger asChild>
+                  <button
+                    className={cn(
+                      'flex items-center justify-between w-full px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                      hasActiveChild
+                        ? 'bg-primary/10 text-primary'
+                        : 'hover:bg-muted'
+                    )}
+                  >
+                    <span className="flex items-center gap-3">
+                      {item.icon}
+                      {item.title}
+                    </span>
+                    <ChevronDownIcon
+                      className={cn(
+                        'transition-transform duration-200',
+                        isOpen && 'rotate-180'
+                      )}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-9 space-y-1 mt-1">
+                  {visibleChildren.map((child) => (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      className={cn(
+                        'block px-3 py-2 rounded-md text-sm transition-colors',
+                        isActiveRoute(child.href)
+                          ? 'bg-primary text-primary-foreground'
+                          : 'hover:bg-muted'
+                      )}
+                      onClick={onNavClick}
+                    >
+                      {child.title}
+                    </Link>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          }
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href!}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                isActiveRoute(item.href!)
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-muted'
+              )}
+              onClick={onNavClick}
+            >
+              {item.icon}
+              {item.title}
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );
@@ -139,13 +267,6 @@ function SidebarContent({ pathname, onNavClick, can }: SidebarContentProps) {
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
-
-// Key icon for change password
-const KeyIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" />
-  </svg>
-);
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
@@ -162,6 +283,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Mobile sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="fixed top-4 left-4 z-50 lg:hidden"
+          >
+            <MenuIcon />
+          </Button>
+        </SheetTrigger>
         <SheetContent side="left" className="p-0 w-64">
           <SidebarContent pathname={pathname} onNavClick={() => setSidebarOpen(false)} can={can} />
         </SheetContent>
@@ -176,16 +306,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="lg:pl-64">
         {/* Header */}
         <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6">
-          <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <MenuIcon />
-            </Button>
-          </SheetTrigger>
+          {/* Spacer for mobile menu button */}
+          <div className="w-10 lg:hidden" />
 
           <div className="flex-1" />
 

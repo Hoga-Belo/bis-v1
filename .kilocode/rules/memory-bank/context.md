@@ -2,59 +2,124 @@
 
 ## Current Work Focus
 
-**HR Module Master Data - 100% COMPLETE** ✅
+**Authentication, RBAC, dan HR Module - 100% COMPLETE** ✅
 
-Semua 6 HR master data entities telah diimplementasikan secara lengkap:
-1. ✅ **Divisions** - Complete CRUD dengan code, name, description
-2. ✅ **Departments** - Complete CRUD dengan division relationship + manager selection
-3. ✅ **Positions** - Complete CRUD dengan code, name, level, description
-4. ✅ **Job Grades** - Complete CRUD dengan code, name, minSalary, maxSalary
-5. ✅ **Employment Statuses** - Complete CRUD dengan code, name, description
-6. ✅ **Work Locations** - Complete CRUD dengan code, name, address, city relationship
-7. ✅ **Organization Structure** - Read-only hierarchy visualization dengan circular dependency protection
+Semua modul inti telah diimplementasikan dan diuji:
+1. ✅ **Authentication** - JWT login, refresh token rotation, first login password change
+2. ✅ **RBAC** - 11 predefined roles, 374 permissions, permission guards
+3. ✅ **User Management** - CRUD users, role assignment, password reset
+4. ✅ **Role Management** - CRUD roles, permission tree UI
+5. ✅ **Audit Trail** - Global interceptor, old value capture, 43 table mappings
+6. ✅ **HR Module Master Data** - 7 sub-modules (Divisions, Departments, Positions, Job Grades, Employment Statuses, Work Locations, Organization)
+7. ✅ **HR Module Employees** - Complete CRUD, photo upload, document management, family/education records, statistics, contract expiry tracking
+8. ✅ **Dashboard Integration** - HR statistics cards, contract expiry alerts
 
-**Siap untuk fase berikutnya: Employee Management**
+**Testing Results:**
+- Backend API: 12/12 endpoints passed
+- Frontend Login Flow: 8/8 test cases passed
+- Protected Routes: 16/16 pages verified
+
+**Siap untuk fase berikutnya: Attendance Module**
 
 ## Recent Changes
 
-### HR Module Enhancements (2025-12-28)
+### Bug Fixes & Improvements (2025-12-29)
 
-#### Circular Dependency Validation
-- **Generic validation method**: `validateNoCircularDependency(entityId, proposedManagerId, getManager)` di organization service
-- **Employee-specific convenience method**: `validateEmployeeManagerNoCircularDependency(employeeId, proposedManagerId)`
-- **Visited set protection**: Ditambahkan pada `getOrganizationTree`, `getEmployeeSubtree`, dan `getAllSubordinates` untuk mencegah infinite loops
-- **ManagerLookupFn type**: Exported untuk reusability
+#### Critical Issues Fixed
+1. **Route Order Conflict** - Fixed employees controller route order (`/statistics` dan `/contract-expiring` sebelum `/:id`)
+2. **Audit Schema Missing Columns** - Added missing columns to audit_logs table
+3. **Frontend API Environment Variable** - Fixed mismatch between `NEXT_PUBLIC_API_URL` dan actual usage
+4. **Permission Format Mismatch** - Standardized to COLON notation (`hr:employee:read` instead of `hr.employee.read`)
+5. **Missing HR Menu** - Added HR menu item to dashboard navigation
+6. **API Response Handling** - Fixed `response.data` extraction in frontend API client
 
-#### Permission Code Format Fix
-- **All HR UI components** sekarang menggunakan colon-separated permission codes (e.g., `hr:division:update`)
-- **Konsisten dengan backend seeder format** - sebelumnya beberapa komponen menggunakan dot separator
+#### Backend Implementation Complete
+- **Auth Service**: Database integration, bcrypt validation, JWT tokens, refresh token rotation
+- **Permission Guards**: `@RequirePermissions`, `@Public`, `@CurrentUser` decorators
+- **Global Guards**: JwtAuthGuard dan PermissionsGuard registered di AppModule
+- **User Management**: CRUD, role assignment, password reset, first login flow
+- **Role Management**: CRUD, permission assignment via permission tree
+- **Audit Trail**: Global interceptor dengan old value capture, 43 table mappings
+- **HR Module**: 8 sub-modules fully implemented
 
-#### Department Form Manager Selection
-- **New endpoint**: `GET /hr/organization/employees` untuk mendapatkan list active employees
-- **Manager dropdown**: Ditambahkan pada DepartmentForm dengan format "NIK - Full Name"
-- **Optional field**: Dengan opsi "Tidak ada manager"
+#### Frontend Implementation Complete
+- **Protected Routes**: ProtectedRoute component dengan hydration handling
+- **Permission-based UI**: PermissionGate component, usePermissions hook
+- **Auth Store**: Zustand dengan refresh token support, isHydrated state
+- **API Client**: Axios dengan automatic token refresh on 401
+- **HR Module**: 8 sub-modules dengan full CRUD pages
+- **Dashboard**: HR statistics integration
 
-### HR Module Master Data Implementation (Completed: 2025-12-28)
+### Employee Module Implementation (2025-12-28)
 
 #### Backend Implementation
-- **7 Sub-modules** dalam HR module dengan struktur konsisten
-- **RESTful API endpoints** untuk semua entities dengan pagination, search, dan filtering
-- **Permission-based access control** untuk setiap endpoint
-- **Soft delete pattern** untuk data recovery
-- **Audit trail integration** untuk semua operasi CRUD
+- **Upload Configuration**: `backend/src/config/upload.config.ts` dengan Multer untuk photos dan documents
+- **Employee Module**: Complete CRUD dengan file upload support
+- **DTOs**: CreateEmployee, UpdateEmployee, EmployeeQuery, CreateEmployeeFamily, CreateEmployeeEducation
+- **Service Methods**:
+  - CRUD operations dengan soft delete
+  - `uploadPhoto()` - Upload foto karyawan
+  - `uploadDocument()` - Upload dokumen karyawan
+  - `deleteDocument()` - Hapus dokumen karyawan
+  - `getStatistics()` - Get employee statistics
+  - `getContractExpiring()` - Get employees dengan kontrak yang akan berakhir
+- **Controller Endpoints**: 18+ endpoints dengan Swagger documentation
+- **File Storage**: `backend/uploads/photos/` dan `backend/uploads/documents/`
 
 #### Frontend Implementation
-- **HR Layout** dengan sidebar navigation
-- **18 Pages** (List, Create, Edit untuk 6 entities)
-- **14 Components** (Table dan Form untuk setiap entity + Organization views)
-- **Consistent UX patterns** across all HR pages
-- **Permission-based UI rendering** dengan PermissionGate
+- **Employee Pages**:
+  - List page dengan search, filter, dan pagination
+  - Detail page dengan 6 tabs (Personal, Employment, Family, Education, Documents, Payroll)
+  - Create page dengan multi-section form
+  - Edit page dengan pre-populated data
+- **Employee Components**:
+  - `EmployeeTable` - Data table dengan actions
+  - `EmployeeForm` - Multi-section form (Personal, Address, Employment, Payroll)
+  - `PhotoUpload` - Upload dan preview foto
+  - `DocumentUpload` - Upload dokumen dengan drag-and-drop
+  - `DocumentList` - List dokumen dengan download dan delete
+  - `EmployeeStats` - Statistics cards
+  - `ContractExpiryAlert` - Alert untuk kontrak expiring
+- **Tab Components**:
+  - `PersonalInfoTab` - Informasi personal
+  - `EmploymentTab` - Informasi kepegawaian
+  - `FamilyTab` - Data keluarga dengan inline CRUD
+  - `EducationTab` - Data pendidikan dengan inline CRUD
+  - `DocumentsTab` - Manajemen dokumen
+  - `PayrollTab` - Data payroll (permission-protected)
+- **Form Sections**:
+  - `PersonalInfoSection` - Form personal info
+  - `AddressSection` - Form alamat
+  - `EmploymentSection` - Form kepegawaian
+  - `PayrollSection` - Form payroll (permission-protected)
 
-#### Permissions Seeded
-- 25 HR permissions added to user-access seeder
-- All permissions assigned to Super Admin and HR Manager roles
+#### Dashboard Integration
+- **StatsCard Component**: Reusable stats card untuk dashboard
+- **Dashboard Page**: Updated dengan HR statistics section
+- **API Integration**: `employeesApi.getStatistics()` dan `employeesApi.getContractExpiring()`
+
+#### Permissions Added (COLON Notation)
+- `hr:employee:create` - Create employees
+- `hr:employee:read` - View employees
+- `hr:employee:update` - Update employees
+- `hr:employee:delete` - Delete employees
+- `hr:employee:read:payroll` - View payroll data
+- `hr:employee:create:payroll` - Create payroll data
+- `hr:employee:update:payroll` - Update payroll data
+
+#### API Client Updates
+- **Multipart Form Data Support**: Axios client updated untuk handle file uploads
+- **Master Data API**: New endpoints untuk blood types, religions, education levels, relationship types
+- **HR API**: Complete `employeesApi` dengan semua endpoints
 
 ### Previous Implementations
+
+#### HR Module Master Data (Complete - 2025-12-28)
+- 7 Sub-modules: Divisions, Departments, Positions, Job Grades, Employment Statuses, Work Locations, Organization
+- RESTful API endpoints dengan pagination, search, filtering
+- Permission-based access control
+- Soft delete pattern
+- Audit trail integration
 
 #### User Access Module (Complete)
 - JWT authentication dengan refresh token rotation
@@ -69,30 +134,21 @@ Semua 6 HR master data entities telah diimplementasikan secara lengkap:
 
 ## Next Steps
 
-### Immediate Priority (HR Module Phase 2)
-1. **Employee Management**
-   - Employee CRUD dengan comprehensive profile
-   - Employee family records
-   - Employee education records
-   - Employee documents management
-   
-2. **Attendance Tracking**
+### Immediate Priority (HR Module Phase 3)
+1. **Attendance Tracking**
    - Daily attendance records
    - Check-in/check-out functionality
    - Attendance reports
 
-3. **Leave Management**
+2. **Leave Management**
    - Leave request submission
    - Approval workflow
    - Leave balance tracking
 
-### Short-term Goals
+### Medium-term Goals
 - Inventory module (products, stock, assets)
 - Mess module (sites, blocks, rooms, occupancy)
 - Building module (buildings, floors, rooms, maintenance)
-
-### Medium-term Goals
-- Dashboard widgets with statistics
 - Real-time notifications
 - Reporting and analytics
 - Data export functionality
@@ -105,7 +161,56 @@ Semua 6 HR master data entities telah diimplementasikan secara lengkap:
 
 - PostgreSQL 15 required for JSONB and partial indexes
 - Docker Compose available for local development
-- Default admin credentials: NIK=ADMIN001, Password=Admin@123
+- **Default admin credentials**: NIK=ADMIN001, Password=NewPass123 (changed from Admin@123 after first login)
 - ESLint 9.x with flat config format (CommonJS) for both backend and frontend
 - First login requires password change
 - NODE_ENV=production on development machine - use `--include=dev` flag for npm install
+- File uploads stored in `backend/uploads/` directory (photos and documents subdirectories)
+- **Permission Format**: COLON notation (e.g., `hr:employee:read`, `user-access:user:create`)
+- **API Response Format**: `{ success, data, message, meta? }`
+- **374 Permissions** seeded untuk Super Admin role
+- **11 Predefined Roles** available
+
+## Testing Summary
+
+### Backend API Tests (12/12 Passed)
+1. ✅ POST /api/auth/login - Login with valid credentials
+2. ✅ GET /api/users - List users with pagination
+3. ✅ GET /api/roles - List roles
+4. ✅ GET /api/hr/divisions - List divisions
+5. ✅ GET /api/hr/departments - List departments
+6. ✅ GET /api/hr/positions - List positions
+7. ✅ GET /api/hr/job-grades - List job grades
+8. ✅ GET /api/hr/employment-statuses - List employment statuses
+9. ✅ GET /api/hr/work-locations - List work locations
+10. ✅ GET /api/hr/organization/tree - Get organization tree
+11. ✅ GET /api/hr/employees - List employees
+12. ✅ GET /api/hr/employees/statistics - Get employee statistics
+
+### Frontend Login Flow Tests (8/8 Passed)
+1. ✅ Login page renders correctly
+2. ✅ Login with valid credentials
+3. ✅ Token stored in localStorage
+4. ✅ Redirect to dashboard after login
+5. ✅ First login redirect to change password
+6. ✅ Change password flow
+7. ✅ Protected route access
+8. ✅ Logout clears tokens
+
+### Protected Routes Tests (16/16 Passed)
+1. ✅ /dashboard - Main dashboard
+2. ✅ /users - User list
+3. ✅ /users/create - Create user
+4. ✅ /users/[id] - Edit user
+5. ✅ /roles - Role list
+6. ✅ /roles/[id] - Edit role
+7. ✅ /roles/[id]/permissions - Role permissions
+8. ✅ /audit - Audit logs
+9. ✅ /hr/divisions - Division list
+10. ✅ /hr/departments - Department list
+11. ✅ /hr/positions - Position list
+12. ✅ /hr/job-grades - Job grade list
+13. ✅ /hr/employment-statuses - Employment status list
+14. ✅ /hr/work-locations - Work location list
+15. ✅ /hr/organization - Organization structure
+16. ✅ /hr/employees - Employee list

@@ -27,10 +27,17 @@ export default function WorkLocationsPage() {
         limit: 10,
         search: search || undefined,
       });
-      if (response.success && response.data) {
-        setData(response.data.data);
-        if (response.data.meta) {
-          setTotalPages(response.data.meta.totalPages);
+      if (response.success) {
+        // Transform interceptor flattens { data, meta } to { success, data, meta }
+        // So response.data is the array and response.meta is at top level
+        const locations = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { data: WorkLocation[] })?.data ?? [];
+        const meta = (response as { meta?: { totalPages: number } }).meta;
+        
+        setData(locations);
+        if (meta) {
+          setTotalPages(meta.totalPages);
         }
       }
     } catch (error) {

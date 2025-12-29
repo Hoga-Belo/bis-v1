@@ -28,7 +28,6 @@ interface AuthenticatedUser {
 
 interface RequestWithUser extends Request {
   user?: AuthenticatedUser;
-  ip?: string;
 }
 
 @Injectable()

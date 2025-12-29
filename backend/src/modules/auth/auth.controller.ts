@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Req } from '@nestjs/common';
+import { Controller, Post, Body, Get, Req, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService, AuthenticatedUser } from './auth.service';
 import { LoginDto, ChangePasswordDto, RefreshTokenDto } from './dto';
@@ -8,6 +8,8 @@ import { Request } from 'express';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) {}
 
   @Public()
@@ -16,10 +18,18 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() loginDto: LoginDto, @Req() req: Request) {
-    const userAgentHeader = req.headers['user-agent'];
-    const userAgent = Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader;
-    const ipAddress = req.socket?.remoteAddress;
-    return this.authService.login(loginDto, userAgent, ipAddress);
+    try {
+      this.logger.log(`Login attempt for NIK: ${loginDto.nik}`);
+      const userAgentHeader = req.headers['user-agent'];
+      const userAgent = Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader;
+      const ipAddress = req.socket?.remoteAddress;
+      const result = await this.authService.login(loginDto, userAgent, ipAddress);
+      this.logger.log(`Login successful for NIK: ${loginDto.nik}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`Login failed for NIK: ${loginDto.nik}`, error instanceof Error ? error.stack : String(error));
+      throw error;
+    }
   }
 
   @Public()

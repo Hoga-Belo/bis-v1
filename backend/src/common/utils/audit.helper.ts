@@ -190,7 +190,7 @@ const NESTED_ROUTE_PATTERNS: Array<{
   },
   // HR - Nested Routes
   {
-    pattern: /\/employees\/[^/]+\/family/,
+    pattern: /\/hr\/employees\/[^/]+\/families/,
     info: {
       module: 'hr',
       entityType: 'EmployeeFamily',
@@ -200,7 +200,7 @@ const NESTED_ROUTE_PATTERNS: Array<{
     },
   },
   {
-    pattern: /\/employees\/[^/]+\/education/,
+    pattern: /\/hr\/employees\/[^/]+\/educations/,
     info: {
       module: 'hr',
       entityType: 'EmployeeEducation',
@@ -210,11 +210,21 @@ const NESTED_ROUTE_PATTERNS: Array<{
     },
   },
   {
-    pattern: /\/employees\/[^/]+\/documents/,
+    pattern: /\/hr\/employees\/[^/]+\/documents/,
     info: {
       module: 'hr',
       entityType: 'EmployeeDocument',
       tableName: 'employee_documents',
+      isNestedRoute: true,
+      parentEntity: 'Employee',
+    },
+  },
+  {
+    pattern: /\/hr\/employees\/[^/]+\/photo/,
+    info: {
+      module: 'hr',
+      entityType: 'Employee',
+      tableName: 'employees',
       isNestedRoute: true,
       parentEntity: 'Employee',
     },
@@ -245,7 +255,7 @@ const URL_ENTITY_MAP: Record<string, EntityInfo> = {
   // ==========================================
   // HR Module
   // ==========================================
-  '/employees': {
+  '/hr/employees': {
     module: 'hr',
     entityType: 'Employee',
     tableName: 'employees',

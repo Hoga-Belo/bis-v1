@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,6 +14,8 @@ import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { User, RefreshToken } from '../../entities/user-access';
+
+const logger = new Logger('AuthService');
 
 export interface AuthenticatedUser {
   id: string;
@@ -108,57 +111,80 @@ export class AuthService {
   async login(loginDto: LoginDto, userAgent?: string, ipAddress?: string) {
     const { nik, password } = loginDto;
 
-    // Validate credentials and get user from database
-    const user = await this.validateCredentials(nik, password);
+    logger.log(`[LOGIN] Starting login for NIK: ${nik}`);
 
-    // Extract roles from user relations
-    const roles = user.userRoles.map((ur) => ur.role.code);
+    try {
+      // Validate credentials and get user from database
+      logger.log(`[LOGIN] Step 1: Validating credentials`);
+      const user = await this.validateCredentials(nik, password);
+      logger.log(`[LOGIN] Step 1 complete: User found with ID ${user.id}`);
 
-    // Extract permissions from nested relations
-    const permissionsSet = new Set<string>();
-    user.userRoles.forEach((ur) => {
-      ur.role.rolePermissions?.forEach((rp) => {
-        if (rp.permission?.code) {
-          permissionsSet.add(rp.permission.code);
-        }
+      // Extract roles from user relations
+      logger.log(`[LOGIN] Step 2: Extracting roles`);
+      const roles = user.userRoles.map((ur) => ur.role.code);
+      logger.log(`[LOGIN] Step 2 complete: Found ${roles.length} roles`);
+
+      // Extract permissions from nested relations
+      logger.log(`[LOGIN] Step 3: Extracting permissions`);
+      const permissionsSet = new Set<string>();
+      user.userRoles.forEach((ur) => {
+        ur.role.rolePermissions?.forEach((rp) => {
+          if (rp.permission?.code) {
+            permissionsSet.add(rp.permission.code);
+          }
+        });
       });
-    });
-    const permissions = Array.from(permissionsSet);
+      const permissions = Array.from(permissionsSet);
+      logger.log(`[LOGIN] Step 3 complete: Found ${permissions.length} permissions`);
 
-    // Build JWT payload
-    const payload: JwtPayload = {
-      sub: user.id,
-      nik: user.nik,
-      roles,
-      permissions,
-    };
-
-    const accessToken = this.jwtService.sign(payload);
-
-    // Generate refresh token
-    const refreshToken = await this.generateRefreshToken(
-      user.id,
-      userAgent,
-      ipAddress,
-    );
-
-    // Update lastLoginAt timestamp
-    await this.userRepository.update(user.id, {
-      lastLoginAt: new Date(),
-    });
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
+      // Build JWT payload
+      logger.log(`[LOGIN] Step 4: Building JWT payload`);
+      const payload: JwtPayload = {
+        sub: user.id,
         nik: user.nik,
         roles,
         permissions,
-        isFirstLogin: user.isFirstLogin,
+      };
+      logger.log(`[LOGIN] Step 4 complete: Payload built`);
+
+      logger.log(`[LOGIN] Step 5: Signing JWT`);
+      const accessToken = this.jwtService.sign(payload);
+      logger.log(`[LOGIN] Step 5 complete: JWT signed`);
+
+      // Generate refresh token
+      logger.log(`[LOGIN] Step 6: Generating refresh token`);
+      const refreshToken = await this.generateRefreshToken(
+        user.id,
+        userAgent,
+        ipAddress,
+      );
+      logger.log(`[LOGIN] Step 6 complete: Refresh token generated`);
+
+      // Update lastLoginAt timestamp
+      logger.log(`[LOGIN] Step 7: Updating lastLoginAt`);
+      await this.userRepository.update(user.id, {
         lastLoginAt: new Date(),
-      },
-    };
+      });
+      logger.log(`[LOGIN] Step 7 complete: lastLoginAt updated`);
+
+      logger.log(`[LOGIN] Login successful for NIK: ${nik}`);
+
+      return {
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          nik: user.nik,
+          roles,
+          permissions,
+          isFirstLogin: user.isFirstLogin,
+          lastLoginAt: new Date(),
+        },
+      };
+    } catch (error) {
+      logger.error(`[LOGIN] Error during login: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   /**

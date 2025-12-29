@@ -33,15 +33,7 @@ export class PositionsService {
 
     const queryBuilder = this.positionRepository
       .createQueryBuilder('position')
-      .leftJoin(
-        'position.employees',
-        'employee',
-        'employee.deletedAt IS NULL AND employee.employeeStatus = :activeStatus',
-        { activeStatus: EmployeeStatus.ACTIVE },
-      )
-      .addSelect('COUNT(employee.id)', 'employeeCount')
-      .where('position.deletedAt IS NULL')
-      .groupBy('position.id');
+      .where('position.deletedAt IS NULL');
 
     if (search) {
       queryBuilder.andWhere(
@@ -51,18 +43,7 @@ export class PositionsService {
     }
 
     // Get total count before pagination
-    const totalQueryBuilder = this.positionRepository
-      .createQueryBuilder('position')
-      .where('position.deletedAt IS NULL');
-
-    if (search) {
-      totalQueryBuilder.andWhere(
-        '(position.code ILIKE :search OR position.name ILIKE :search)',
-        { search: `%${search}%` },
-      );
-    }
-
-    const total = await totalQueryBuilder.getCount();
+    const total = await queryBuilder.getCount();
 
     // Apply sorting and pagination
     const validSortFields = ['code', 'name', 'level', 'createdAt'];
@@ -70,14 +51,36 @@ export class PositionsService {
     queryBuilder.orderBy(`position.${sortField}`, sortOrder);
     queryBuilder.skip(skip).take(limit);
 
-    const rawResults = await queryBuilder.getRawAndEntities();
+    const positions = await queryBuilder.getMany();
 
-    const data = rawResults.entities.map((position, index) => ({
+    // Get employee counts for each position using subquery
+    const positionIds = positions.map((p) => p.id);
+    const employeeCounts: Record<string, number> = {};
+
+    if (positionIds.length > 0) {
+      const counts = await this.employeeRepository
+        .createQueryBuilder('employee')
+        .select('employee.positionId', 'positionId')
+        .addSelect('COUNT(employee.id)', 'count')
+        .where('employee.positionId IN (:...positionIds)', { positionIds })
+        .andWhere('employee.deletedAt IS NULL')
+        .andWhere('employee.employeeStatus = :activeStatus', {
+          activeStatus: EmployeeStatus.ACTIVE,
+        })
+        .groupBy('employee.positionId')
+        .getRawMany();
+
+      counts.forEach((c) => {
+        employeeCounts[c.positionId] = parseInt(c.count, 10);
+      });
+    }
+
+    const data = positions.map((position) => ({
       id: position.id,
       code: position.code,
       name: position.name,
       level: position.level,
-      employeeCount: parseInt(rawResults.raw[index]?.employeeCount || '0', 10),
+      employeeCount: employeeCounts[position.id] || 0,
       createdAt: position.createdAt,
       updatedAt: position.updatedAt,
     }));

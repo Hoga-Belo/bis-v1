@@ -38,5 +38,9 @@ docker/postgres-data/
 # Testing
 coverage/
 
+# Uploads (keep .gitkeep files)
+backend/uploads/*
+!backend/uploads/**/.gitkeep
+
 # Misc
 *.tsbuildinfo

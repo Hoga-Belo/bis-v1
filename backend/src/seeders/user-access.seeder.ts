@@ -103,6 +103,24 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
     audit: ['log', 'activity'],
   };
 
+  // Special permissions that don't follow the standard pattern
+  const specialPermissions = [
+    {
+      code: 'hr:employee:read:payroll',
+      module: 'hr',
+      feature: 'employee',
+      action: 'read:payroll',
+      description: 'Can view employee payroll data (salary, bank, BPJS)',
+    },
+    {
+      code: 'hr:employee:create:payroll',
+      module: 'hr',
+      feature: 'employee',
+      action: 'create:payroll',
+      description: 'Can create/update employee payroll data',
+    },
+  ];
+
   const permissions: {
     code: string;
     module: string;
@@ -124,6 +142,9 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
       }
     }
   }
+
+  // Add special permissions
+  permissions.push(...specialPermissions);
 
   const savedPermissions: Record<string, Permission> = {};
   for (const permission of permissions) {
@@ -197,20 +218,46 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
   }
   console.log(`  ✓ Assigned permissions to HR Manager role`);
 
-  // Seed Role-Permission mappings for HR Staff (HR module read only)
+  // Seed Role-Permission mappings for HR Staff (HR module limited access)
+  // HR Staff can: read, create, update employees (no delete, no payroll)
+  // HR Staff can: read all other HR features
   const hrStaffRole = savedRoles['HR_STAFF'];
+  const hrStaffAllowedEmployeeActions = ['read', 'create', 'update'];
   for (const permission of Object.values(savedPermissions)) {
-    if (permission.module === 'hr' && permission.action === 'read') {
-      const exists = await rolePermissionRepo.findOne({
-        where: { roleId: hrStaffRole.id, permissionId: permission.id },
-      });
-      if (!exists) {
-        await rolePermissionRepo.save(
-          rolePermissionRepo.create({
-            roleId: hrStaffRole.id,
-            permissionId: permission.id,
-          }),
-        );
+    if (permission.module === 'hr') {
+      // For employee feature: allow read, create, update (no delete, no payroll)
+      if (permission.feature === 'employee') {
+        if (
+          hrStaffAllowedEmployeeActions.includes(permission.action) &&
+          !permission.action.includes('payroll')
+        ) {
+          const exists = await rolePermissionRepo.findOne({
+            where: { roleId: hrStaffRole.id, permissionId: permission.id },
+          });
+          if (!exists) {
+            await rolePermissionRepo.save(
+              rolePermissionRepo.create({
+                roleId: hrStaffRole.id,
+                permissionId: permission.id,
+              }),
+            );
+          }
+        }
+      } else {
+        // For other HR features: read only
+        if (permission.action === 'read') {
+          const exists = await rolePermissionRepo.findOne({
+            where: { roleId: hrStaffRole.id, permissionId: permission.id },
+          });
+          if (!exists) {
+            await rolePermissionRepo.save(
+              rolePermissionRepo.create({
+                roleId: hrStaffRole.id,
+                permissionId: permission.id,
+              }),
+            );
+          }
+        }
       }
     }
   }

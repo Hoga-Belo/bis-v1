@@ -20,7 +20,7 @@ export default function CreateUserPage() {
 
   return (
     <PermissionGate
-      permissions={['user.user.create']}
+      permissions={['user:user:create']}
       fallback={
         <div className="flex flex-col items-center justify-center py-12">
           <p className="text-muted-foreground">

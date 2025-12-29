@@ -138,7 +138,7 @@ export function RoleTable({ roles, isLoading, onRefresh }: RoleTableProps) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       {!role.isSystem && (
-                        <PermissionGate permissions={['user.role.update']}>
+                        <PermissionGate permissions={['user:role:update']}>
                           <DropdownMenuItem
                             onClick={() => router.push(`/roles/${role.id}`)}
                           >
@@ -147,7 +147,7 @@ export function RoleTable({ roles, isLoading, onRefresh }: RoleTableProps) {
                           </DropdownMenuItem>
                         </PermissionGate>
                       )}
-                      <PermissionGate permissions={['user.permission.update']}>
+                      <PermissionGate permissions={['user:permission:update']}>
                         <DropdownMenuItem
                           onClick={() =>
                             router.push(`/roles/${role.id}/permissions`)
@@ -158,7 +158,7 @@ export function RoleTable({ roles, isLoading, onRefresh }: RoleTableProps) {
                         </DropdownMenuItem>
                       </PermissionGate>
                       {!role.isSystem && (
-                        <PermissionGate permissions={['user.role.delete']}>
+                        <PermissionGate permissions={['user:role:delete']}>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-destructive"

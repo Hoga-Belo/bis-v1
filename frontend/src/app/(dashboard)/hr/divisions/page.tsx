@@ -35,14 +35,22 @@ export default function DivisionsPage() {
         sortOrder: 'ASC',
       };
       const response = await divisionsApi.getAll(params);
-      if (response.success && response.data) {
-        const responseData = response.data;
-        setDivisions(responseData.data);
-        setPagination((prev) => ({
-          ...prev,
-          total: responseData.meta.total,
-          totalPages: responseData.meta.totalPages,
-        }));
+      if (response.success) {
+        // Transform interceptor flattens { data, meta } to { success, data, meta }
+        // So response.data is the array and response.meta is at top level
+        const divisions = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { data: Division[] })?.data ?? [];
+        const meta = (response as { meta?: { total: number; totalPages: number } }).meta;
+        
+        setDivisions(divisions);
+        if (meta) {
+          setPagination((prev) => ({
+            ...prev,
+            total: meta.total,
+            totalPages: meta.totalPages,
+          }));
+        }
       }
     } catch (error) {
       toast.error('Gagal memuat data divisi');

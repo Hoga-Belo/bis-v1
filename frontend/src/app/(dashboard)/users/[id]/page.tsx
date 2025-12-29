@@ -157,7 +157,7 @@ export default function UserDetailPage() {
 
   return (
     <PermissionGate
-      permissions={['user.user.read']}
+      permissions={['user:user:read']}
       fallback={
         <div className="flex flex-col items-center justify-center py-12">
           <p className="text-muted-foreground">
@@ -201,7 +201,7 @@ export default function UserDetailPage() {
                 entityName={user.nik}
               />
             </PermissionGate>
-            <PermissionGate permissions={['user.user.update']}>
+            <PermissionGate permissions={['user:user:update']}>
               <Button
                 variant="outline"
                 onClick={() => setShowResetDialog(true)}
@@ -210,7 +210,7 @@ export default function UserDetailPage() {
                 Reset Password
               </Button>
             </PermissionGate>
-            <PermissionGate permissions={['user.user.delete']}>
+            <PermissionGate permissions={['user:user:delete']}>
               <Button
                 variant="destructive"
                 onClick={() => setShowDeactivateDialog(true)}
@@ -303,7 +303,7 @@ export default function UserDetailPage() {
             </CardHeader>
             <CardContent>
               <PermissionGate
-                permissions={['user.role.update']}
+                permissions={['user:role:update']}
                 fallback={
                   <div className="text-center py-8 text-muted-foreground">
                     Anda tidak memiliki akses untuk mengubah role user

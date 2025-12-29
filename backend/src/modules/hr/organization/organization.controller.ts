@@ -22,9 +22,8 @@ export class OrganizationController {
     status: 200,
     description: 'Organization tree retrieved successfully',
   })
-  async getOrganizationTree(): Promise<{ data: OrganizationNode[] }> {
-    const data = await this.organizationService.getOrganizationTree();
-    return { data };
+  async getOrganizationTree(): Promise<OrganizationNode[]> {
+    return this.organizationService.getOrganizationTree();
   }
 
   @Get('tree/:employeeId')
@@ -38,9 +37,8 @@ export class OrganizationController {
   @ApiResponse({ status: 404, description: 'Employee not found' })
   async getEmployeeSubtree(
     @Param('employeeId', ParseUUIDPipe) employeeId: string,
-  ): Promise<{ data: OrganizationNode | null }> {
-    const data = await this.organizationService.getEmployeeSubtree(employeeId);
-    return { data };
+  ): Promise<OrganizationNode | null> {
+    return this.organizationService.getEmployeeSubtree(employeeId);
   }
 
   @Get('direct-reports/:employeeId')
@@ -53,9 +51,8 @@ export class OrganizationController {
   })
   async getDirectReports(
     @Param('employeeId', ParseUUIDPipe) employeeId: string,
-  ): Promise<{ data: DirectReportEmployee[] }> {
-    const data = await this.organizationService.getDirectReports(employeeId);
-    return { data };
+  ): Promise<DirectReportEmployee[]> {
+    return this.organizationService.getDirectReports(employeeId);
   }
 
   @Get('subordinates/:employeeId')
@@ -70,9 +67,8 @@ export class OrganizationController {
   })
   async getAllSubordinates(
     @Param('employeeId', ParseUUIDPipe) employeeId: string,
-  ): Promise<{ data: DirectReportEmployee[] }> {
-    const data = await this.organizationService.getAllSubordinates(employeeId);
-    return { data };
+  ): Promise<DirectReportEmployee[]> {
+    return this.organizationService.getAllSubordinates(employeeId);
   }
 
   @Get('departments')
@@ -82,9 +78,8 @@ export class OrganizationController {
     status: 200,
     description: 'Department hierarchy retrieved successfully',
   })
-  async getDepartmentHierarchy(): Promise<{ data: DepartmentHierarchy[] }> {
-    const data = await this.organizationService.getDepartmentHierarchy();
-    return { data };
+  async getDepartmentHierarchy(): Promise<DepartmentHierarchy[]> {
+    return this.organizationService.getDepartmentHierarchy();
   }
 
   @Get('employees')
@@ -94,8 +89,7 @@ export class OrganizationController {
     status: 200,
     description: 'Employees list retrieved successfully',
   })
-  async getAllEmployees(): Promise<{ data: EmployeeSummaryDto[] }> {
-    const data = await this.organizationService.getAllEmployees();
-    return { data };
+  async getAllEmployees(): Promise<EmployeeSummaryDto[]> {
+    return this.organizationService.getAllEmployees();
   }
 }

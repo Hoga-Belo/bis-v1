@@ -35,14 +35,22 @@ export default function JobGradesPage() {
         sortOrder: 'ASC',
       };
       const response = await jobGradesApi.getAll(params);
-      if (response.success && response.data) {
-        const responseData = response.data;
-        setJobGrades(responseData.data);
-        setPagination((prev) => ({
-          ...prev,
-          total: responseData.meta.total,
-          totalPages: responseData.meta.totalPages,
-        }));
+      if (response.success) {
+        // Transform interceptor flattens { data, meta } to { success, data, meta }
+        // So response.data is the array and response.meta is at top level
+        const jobGrades = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { data: JobGrade[] })?.data ?? [];
+        const meta = (response as { meta?: { total: number; totalPages: number } }).meta;
+        
+        setJobGrades(jobGrades);
+        if (meta) {
+          setPagination((prev) => ({
+            ...prev,
+            total: meta.total,
+            totalPages: meta.totalPages,
+          }));
+        }
       }
     } catch (error) {
       toast.error('Gagal memuat data golongan');

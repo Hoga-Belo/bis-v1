@@ -144,6 +144,81 @@ Bebang BIS addresses the operational challenges of PT Prima Sarana Gemilang (Sit
   - Employee-specific convenience method
   - Protects tree building methods from infinite loops
 
+### HR Module (Employee Management - Implemented)
+
+#### Employee CRUD Operations
+- Create, read, update, delete employees
+- Comprehensive employee profile with multiple data sections:
+  - **Personal Information**: NIK, full name, gender, birth date/place, blood type, religion, marital status, phone, email
+  - **Address Information**: Current address, city, province, postal code
+  - **Employment Information**: Department, division, position, job grade, employment status, work location, join date, contract dates, manager
+  - **Payroll Information**: Bank name, account number, account holder name, NPWP, BPJS Kesehatan, BPJS Ketenagakerjaan
+- Search by NIK, name, or email
+- Filter by department, division, position, employment status
+- Pagination with configurable page size
+- Soft delete for data recovery
+
+#### Photo Upload
+- Upload employee profile photo
+- Supported formats: JPG, JPEG, PNG, GIF
+- Maximum file size: 5MB
+- Photo preview before upload
+- Automatic file naming with unique suffix
+- Storage in `uploads/photos/` directory
+
+#### Document Management
+- Upload employee documents (contracts, certifications, etc.)
+- Supported formats: PDF, Word documents, images
+- Maximum file size: 10MB per document
+- Document metadata: name, type, file path, upload date
+- Drag-and-drop upload interface
+- Document list with download and delete actions
+- Storage in `uploads/documents/` directory
+
+#### Family Records Management
+- Add, edit, delete employee family members
+- Fields: name, relationship type, birth date, phone, address, is emergency contact
+- Relationship types from master data (Father, Mother, Spouse, Child, Sibling, etc.)
+- Inline CRUD within employee detail page
+- Emergency contact designation for quick reference
+
+#### Education Records Management
+- Add, edit, delete employee education history
+- Fields: education level, institution name, major, graduation year, GPA
+- Education levels from master data (SD, SMP, SMA, D3, S1, S2, S3, etc.)
+- Inline CRUD within employee detail page
+- Chronological display of education history
+
+#### Employee Statistics Dashboard
+- **Total Employees**: Count of all employees (including inactive)
+- **Active Employees**: Count of employees with active status
+- **Contract Expiring**: Count of employees with contracts expiring in 30 days
+- Statistics displayed on main dashboard with visual cards
+- Quick navigation to employee list from statistics
+
+#### Contract Expiry Tracking
+- Automatic detection of contracts expiring within 30 days
+- Alert component on dashboard showing expiring contracts
+- Employee list with contract end dates
+- Quick access to employee details for contract renewal
+
+#### Field-Level Permissions for Payroll
+- Payroll data protected with separate permissions:
+  - `hr:employee:read:payroll` - View payroll information
+  - `hr:employee:create:payroll` - Create payroll data
+  - `hr:employee:update:payroll` - Update payroll data
+- Payroll tab only visible to users with read permission
+- Payroll form section only editable with create/update permission
+- Sensitive financial data protected from unauthorized access
+
+#### Employee Detail View (6 Tabs)
+1. **Personal Info Tab**: Personal details, contact information, address
+2. **Employment Tab**: Job details, department, position, contract dates
+3. **Family Tab**: Family members with inline add/edit/delete
+4. **Education Tab**: Education history with inline add/edit/delete
+5. **Documents Tab**: Document upload and management
+6. **Payroll Tab**: Bank and tax information (permission-protected)
+
 ### User Management
 - Create, read, update, delete users
 - Assign multiple roles to users

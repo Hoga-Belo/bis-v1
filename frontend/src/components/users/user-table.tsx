@@ -200,13 +200,13 @@ export function UserTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <PermissionGate permissions={['user.user.update']}>
+                      <PermissionGate permissions={['user:user:update']}>
                         <DropdownMenuItem onClick={() => router.push(`/users/${user.id}`)}>
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
                       </PermissionGate>
-                      <PermissionGate permissions={['user.user.update']}>
+                      <PermissionGate permissions={['user:user:update']}>
                         <DropdownMenuItem
                           onClick={() => {
                             setSelectedUser(user);
@@ -217,7 +217,7 @@ export function UserTable({
                           Reset Password
                         </DropdownMenuItem>
                       </PermissionGate>
-                      <PermissionGate permissions={['user.user.delete']}>
+                      <PermissionGate permissions={['user:user:delete']}>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"

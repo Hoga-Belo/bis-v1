@@ -48,6 +48,14 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/modules/hr/employment-statuses/` | Employment Status management (CRUD) |
 | `src/modules/hr/work-locations/` | Work Location management (CRUD with city relationship) |
 | `src/modules/hr/organization/` | Organization structure (read-only hierarchy views) |
+| `src/modules/hr/employees/` | Employee management (CRUD, file uploads, statistics) |
+| `src/modules/hr/employees/employees.module.ts` | Employee module definition with Multer config |
+| `src/modules/hr/employees/employees.controller.ts` | Employee endpoints with Swagger docs (18+ endpoints) |
+| `src/modules/hr/employees/employees.service.ts` | Employee business logic (CRUD, files, stats) |
+| `src/modules/hr/employees/dto/` | CreateEmployee, UpdateEmployee, EmployeeQuery, CreateEmployeeFamily, CreateEmployeeEducation DTOs |
+| `src/config/upload.config.ts` | Multer configurations for photos (5MB) and documents (10MB) |
+| `uploads/photos/` | Employee photo storage directory |
+| `uploads/documents/` | Employee document storage directory |
 | `src/modules/auth/` | Authentication (login, JWT strategy, guards, refresh token) |
 | `src/modules/auth/strategies/` | JWT strategy for Passport.js |
 | `src/modules/auth/guards/` | JwtAuthGuard for route protection |
@@ -105,6 +113,11 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/app/(dashboard)/hr/employment-statuses/` | Employment Status pages (list, create, edit) |
 | `src/app/(dashboard)/hr/work-locations/` | Work Location pages (list, create, edit) |
 | `src/app/(dashboard)/hr/organization/` | Organization structure page |
+| `src/app/(dashboard)/hr/employees/` | Employee pages (list, detail, create, edit) |
+| `src/app/(dashboard)/hr/employees/page.tsx` | Employee list page with search, filter, pagination |
+| `src/app/(dashboard)/hr/employees/[id]/page.tsx` | Employee detail page with 6 tabs |
+| `src/app/(dashboard)/hr/employees/create/page.tsx` | Employee create page with multi-section form |
+| `src/app/(dashboard)/hr/employees/[id]/edit/page.tsx` | Employee edit page with pre-populated data |
 | `src/components/` | React components |
 | `src/components/ui/` | Shadcn UI components |
 | `src/components/forms/` | Form components (LoginForm, ChangePasswordForm) |
@@ -122,10 +135,16 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/components/hr/employment-statuses/` | Employment Status components (EmploymentStatusTable, EmploymentStatusForm) |
 | `src/components/hr/work-locations/` | Work Location components (WorkLocationTable, WorkLocationForm) |
 | `src/components/hr/organization/` | Organization components (OrganizationTree, DepartmentHierarchy) |
+| `src/components/hr/employees/` | Employee components (EmployeeTable, EmployeeForm, PhotoUpload, etc.) |
+| `src/components/hr/employees/tabs/` | Employee detail tabs (PersonalInfoTab, EmploymentTab, FamilyTab, EducationTab, DocumentsTab, PayrollTab) |
+| `src/components/hr/employees/form-sections/` | Employee form sections (PersonalInfoSection, AddressSection, EmploymentSection, PayrollSection) |
+| `src/components/dashboard/` | Dashboard components (StatsCard) |
 | `src/lib/api/` | API client and endpoint definitions |
 | `src/lib/api/client.ts` | Axios client with interceptors |
-| `src/lib/api/endpoints/` | API endpoint functions (auth, users, roles, audit, hr) |
-| `src/lib/api/endpoints/hr.ts` | HR API endpoints (divisions, departments, positions, etc.) |
+| `src/lib/api/endpoints/` | API endpoint functions (auth, users, roles, audit, hr, master-data) |
+| `src/lib/api/endpoints/hr.ts` | HR API endpoints (divisions, departments, positions, employees, etc.) |
+| `src/lib/api/endpoints/master-data.ts` | Master data API endpoints (blood types, religions, education levels, relationship types) |
+| `src/lib/utils/file.ts` | File utility functions (formatFileSize, getFileExtension) |
 | `src/lib/stores/` | Zustand state stores |
 | `src/lib/stores/auth-store.ts` | Authentication state with refresh token support |
 | `src/lib/hooks/` | Custom React hooks |
@@ -137,7 +156,7 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/lib/types/role.ts` | Role management types |
 | `src/lib/types/api.ts` | API response types |
 | `src/lib/types/audit.ts` | Audit types (AuditLog, AuditAction, AuditQueryParams) |
-| `src/lib/types/hr.ts` | HR types (Division, Department, Position, JobGrade, etc.) |
+| `src/lib/types/hr.ts` | HR types (Division, Department, Position, JobGrade, Employee, EmployeeFamily, EmployeeEducation, EmployeeDocument, etc.) |
 
 ## Key Technical Decisions
 
@@ -381,9 +400,51 @@ Examples:
 - hr:organization:read       - View organization structure
 - hr:employee:create         - Create employees
 - hr:employee:read           - View employees
+- hr:employee:update         - Update employees
+- hr:employee:delete         - Delete employees
+- hr:employee:read:payroll   - View employee payroll data (field-level permission)
+- hr:employee:create:payroll - Create employee payroll data (field-level permission)
+- hr:employee:update:payroll - Update employee payroll data (field-level permission)
 - inventory:product:create   - Create products
 - audit:log:read             - View audit logs
 ```
+
+### Auth API Endpoints
+
+| Endpoint | Method | Permission | Description |
+|----------|--------|------------|-------------|
+| `/auth/login` | POST | Public | Login with NIK and password |
+| `/auth/refresh` | POST | Public | Refresh access token |
+| `/auth/change-password` | POST | Authenticated | Change password (first login or voluntary) |
+| `/auth/logout` | POST | Authenticated | Logout and invalidate refresh token |
+
+### User Access API Endpoints
+
+| Endpoint | Method | Permission | Description |
+|----------|--------|------------|-------------|
+| `/users` | GET | `user-access:user:read` | List users with pagination |
+| `/users` | POST | `user-access:user:create` | Create user |
+| `/users/:id` | GET | `user-access:user:read` | Get user by ID |
+| `/users/:id` | PATCH | `user-access:user:update` | Update user |
+| `/users/:id` | DELETE | `user-access:user:delete` | Soft delete user |
+| `/users/:id/assign-roles` | POST | `user-access:user:update` | Assign roles to user |
+| `/users/:id/reset-password` | POST | `user-access:user:update` | Reset user password (admin) |
+| `/roles` | GET | `user-access:role:read` | List roles |
+| `/roles` | POST | `user-access:role:create` | Create role |
+| `/roles/:id` | GET | `user-access:role:read` | Get role by ID |
+| `/roles/:id` | PATCH | `user-access:role:update` | Update role |
+| `/roles/:id` | DELETE | `user-access:role:delete` | Soft delete role |
+| `/roles/:id/permissions` | GET | `user-access:role:read` | Get role permissions |
+| `/roles/:id/permissions` | POST | `user-access:role:update` | Assign permissions to role |
+| `/permissions` | GET | `user-access:permission:read` | List all permissions |
+
+### Audit API Endpoints
+
+| Endpoint | Method | Permission | Description |
+|----------|--------|------------|-------------|
+| `/audit/logs` | GET | `audit:log:read` | List audit logs with filtering and pagination |
+| `/audit/logs/:id` | GET | `audit:log:read` | Get audit log by ID |
+| `/audit/logs/record/:tableName/:recordId` | GET | `audit:log:read` | Get audit history for a specific record |
 
 ### HR Module API Endpoints
 
@@ -422,6 +483,78 @@ Examples:
 | `/hr/organization/tree` | GET | `hr:organization:read` | Get full organization tree |
 | `/hr/organization/department-hierarchy` | GET | `hr:organization:read` | Get department hierarchy |
 | `/hr/organization/employees` | GET | `hr:organization:read` | Get list of active employees for manager selection |
+
+### Employee Module API Endpoints
+
+| Endpoint | Method | Permission | Description |
+|----------|--------|------------|-------------|
+| `/hr/employees` | GET | `hr:employee:read` | List employees with pagination, search, filter |
+| `/hr/employees` | POST | `hr:employee:create` | Create employee |
+| `/hr/employees/statistics` | GET | `hr:employee:read` | Get employee statistics (total, active, contract expiring) |
+| `/hr/employees/contract-expiring` | GET | `hr:employee:read` | Get employees with contracts expiring in 30 days |
+| `/hr/employees/:id` | GET | `hr:employee:read` | Get employee by ID with all relations |
+| `/hr/employees/:id` | PATCH | `hr:employee:update` | Update employee |
+| `/hr/employees/:id` | DELETE | `hr:employee:delete` | Soft delete employee |
+| `/hr/employees/:id/photo` | POST | `hr:employee:update` | Upload employee photo |
+| `/hr/employees/:id/documents` | GET | `hr:employee:read` | List employee documents |
+| `/hr/employees/:id/documents` | POST | `hr:employee:update` | Upload employee document |
+| `/hr/employees/:id/documents/:docId` | DELETE | `hr:employee:update` | Delete employee document |
+| `/hr/employees/:id/family` | GET | `hr:employee:read` | List employee family members |
+| `/hr/employees/:id/family` | POST | `hr:employee:update` | Add employee family member |
+| `/hr/employees/:id/family/:familyId` | PATCH | `hr:employee:update` | Update employee family member |
+| `/hr/employees/:id/family/:familyId` | DELETE | `hr:employee:update` | Delete employee family member |
+| `/hr/employees/:id/education` | GET | `hr:employee:read` | List employee education records |
+| `/hr/employees/:id/education` | POST | `hr:employee:update` | Add employee education record |
+| `/hr/employees/:id/education/:eduId` | PATCH | `hr:employee:update` | Update employee education record |
+| `/hr/employees/:id/education/:eduId` | DELETE | `hr:employee:update` | Delete employee education record |
+
+### File Upload Configuration
+
+The system uses Multer for handling file uploads with the following configurations:
+
+```typescript
+// backend/src/config/upload.config.ts
+
+// Photo upload configuration
+export const photoUploadConfig = {
+  storage: diskStorage({
+    destination: './uploads/photos',
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, `photo-${uniqueSuffix}${extname(file.originalname)}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+      cb(new BadRequestException('Only image files are allowed'), false);
+    }
+    cb(null, true);
+  },
+};
+
+// Document upload configuration
+export const documentUploadConfig = {
+  storage: diskStorage({
+    destination: './uploads/documents',
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, `doc-${uniqueSuffix}${extname(file.originalname)}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.match(/\/(pdf|msword|vnd.openxmlformats|jpeg|jpg|png)$/)) {
+      cb(new BadRequestException('Only PDF, Word, and image files are allowed'), false);
+    }
+    cb(null, true);
+  },
+};
+```
+
+**File Storage Directories:**
+- `backend/uploads/photos/` - Employee photos (max 5MB, images only)
+- `backend/uploads/documents/` - Employee documents (max 10MB, PDF/Word/images)
 
 ### Organization Service Methods
 
@@ -495,10 +628,21 @@ backend/src/modules/hr/
 │   ├── work-locations.controller.ts
 │   ├── work-locations.service.ts
 │   └── dto/
-└── organization/                   # Organization structure (read-only)
-    ├── organization.module.ts
-    ├── organization.controller.ts
-    └── organization.service.ts
+├── organization/                   # Organization structure (read-only)
+│   ├── organization.module.ts
+│   ├── organization.controller.ts
+│   └── organization.service.ts
+└── employees/                      # Employee management
+    ├── employees.module.ts         # Module with Multer config
+    ├── employees.controller.ts     # 18+ endpoints with Swagger docs
+    ├── employees.service.ts        # CRUD, file uploads, statistics
+    └── dto/
+        ├── create-employee.dto.ts
+        ├── update-employee.dto.ts
+        ├── employee-query.dto.ts
+        ├── create-employee-family.dto.ts
+        ├── create-employee-education.dto.ts
+        └── index.ts
 ```
 
 #### Frontend Structure
@@ -530,8 +674,14 @@ frontend/src/app/(dashboard)/hr/
 │   ├── page.tsx
 │   ├── create/page.tsx
 │   └── [id]/page.tsx
-└── organization/                   # Organization chart
-    └── page.tsx
+├── organization/                   # Organization chart
+│   └── page.tsx
+└── employees/                      # Employee pages
+    ├── page.tsx                    # List with search, filter, pagination
+    ├── create/page.tsx             # Multi-section create form
+    └── [id]/
+        ├── page.tsx                # Detail with 6 tabs
+        └── edit/page.tsx           # Edit with pre-populated data
 
 frontend/src/components/hr/
 ├── index.ts                        # Main exports
@@ -559,11 +709,74 @@ frontend/src/components/hr/
 │   ├── index.ts
 │   ├── work-location-table.tsx
 │   └── work-location-form.tsx
-└── organization/
-    ├── index.ts
-    ├── organization-tree.tsx
-    └── department-hierarchy.tsx
+├── organization/
+│   ├── index.ts
+│   ├── organization-tree.tsx
+│   └── department-hierarchy.tsx
+└── employees/
+    ├── index.ts                    # Main exports
+    ├── employee-table.tsx          # Data table with actions
+    ├── employee-form.tsx           # Multi-section form
+    ├── photo-upload.tsx            # Photo upload with preview
+    ├── document-upload.tsx         # Document upload with drag-and-drop
+    ├── document-list.tsx           # Document list with download/delete
+    ├── employee-stats.tsx          # Statistics cards
+    ├── contract-expiry-alert.tsx   # Contract expiry notifications
+    ├── tabs/
+    │   ├── index.ts
+    │   ├── personal-info-tab.tsx   # Personal information display
+    │   ├── employment-tab.tsx      # Employment details display
+    │   ├── family-tab.tsx          # Family records with inline CRUD
+    │   ├── education-tab.tsx       # Education records with inline CRUD
+    │   ├── documents-tab.tsx       # Document management
+    │   └── payroll-tab.tsx         # Payroll data (permission-protected)
+    └── form-sections/
+        ├── index.ts
+        ├── personal-info-section.tsx
+        ├── address-section.tsx
+        ├── employment-section.tsx
+        └── payroll-section.tsx     # Permission-protected section
 ```
+
+### Dashboard Integration
+
+The dashboard page integrates with the Employee Module to display HR statistics:
+
+```typescript
+// frontend/src/app/(dashboard)/dashboard/page.tsx
+
+// HR Statistics Section
+<section>
+  <h2>HR Overview</h2>
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <StatsCard
+      title="Total Employees"
+      value={stats.total}
+      icon={<Users />}
+    />
+    <StatsCard
+      title="Active Employees"
+      value={stats.active}
+      icon={<UserCheck />}
+    />
+    <StatsCard
+      title="Contract Expiring"
+      value={stats.contractExpiring}
+      icon={<AlertTriangle />}
+      variant="warning"
+    />
+  </div>
+  <ContractExpiryAlert employees={expiringContracts} />
+</section>
+```
+
+**Dashboard Components:**
+- `StatsCard` - Reusable statistics card with icon, title, value, and optional variant
+- `ContractExpiryAlert` - Alert component showing employees with contracts expiring in 30 days
+
+**API Integration:**
+- `employeesApi.getStatistics()` - Fetches total, active, and contract expiring counts
+- `employeesApi.getContractExpiring()` - Fetches list of employees with expiring contracts
 
 ### Audit Trail Architecture
 
