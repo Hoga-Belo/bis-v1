@@ -2,6 +2,7 @@ import { AppDataSource } from '../config/data-source';
 import { seedMasterData } from './master-data.seeder';
 import { seedUserAccess } from './user-access.seeder';
 import { seedHR } from './hr.seeder';
+import { seedInventory } from './inventory.seeder';
 
 async function runSeeders(): Promise<void> {
   console.log('='.repeat(50));
@@ -25,6 +26,10 @@ async function runSeeders(): Promise<void> {
 
     // 3. HR data (depends on master data for cities if work locations need them)
     await seedHR(AppDataSource);
+    console.log('');
+
+    // 4. Inventory data (no dependencies on other seeders)
+    await seedInventory(AppDataSource);
     console.log('');
 
     console.log('='.repeat(50));

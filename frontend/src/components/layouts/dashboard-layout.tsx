@@ -93,6 +93,15 @@ const Building2Icon = () => (
   </svg>
 );
 
+const PackageIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m7.5 4.27 9 5.15" />
+    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+    <path d="m3.3 7 8.7 5 8.7-5" />
+    <path d="M12 22V12" />
+  </svg>
+);
+
 const ChevronDownIcon = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="m6 9 6 6 6-6" />
@@ -143,6 +152,20 @@ const navItems: NavItem[] = [
       { title: 'Struktur Organisasi', href: '/hr/organization', permission: 'hr:organization:read' },
     ],
   },
+  {
+    title: 'Inventaris',
+    icon: <PackageIcon />,
+    permission: 'inventory:product:read',
+    children: [
+      { title: 'Dashboard Inventaris', href: '/inventory', permission: 'inventory:product:read' },
+      { title: 'Produk', href: '/inventory/products', permission: 'inventory:product:read' },
+      { title: 'Kategori', href: '/inventory/categories', permission: 'inventory:category:read' },
+      { title: 'Merek', href: '/inventory/brands', permission: 'inventory:brand:read' },
+      { title: 'Satuan', href: '/inventory/uoms', permission: 'inventory:uom:read' },
+      { title: 'Gudang', href: '/inventory/warehouses', permission: 'inventory:warehouse:read' },
+      { title: 'Transaksi Stok', href: '/inventory/stock-transactions', permission: 'inventory:stock:read' },
+    ],
+  },
   { title: 'Audit Trail', href: '/audit', icon: <FileTextIcon />, permission: 'audit:log:read' },
   { title: 'Profil', href: '/profile', icon: <UserIcon /> },
 ];
@@ -156,6 +179,7 @@ interface SidebarContentProps {
 function SidebarContent({ pathname, onNavClick, can }: SidebarContentProps) {
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
     HR: pathname.startsWith('/hr'),
+    Inventaris: pathname.startsWith('/inventory'),
   });
 
   const visibleNavItems = navItems.filter((item) => {

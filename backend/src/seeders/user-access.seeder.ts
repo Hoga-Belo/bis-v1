@@ -95,7 +95,17 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
       'work-location',
       'organization',
     ],
-    inventory: ['stock', 'asset', 'product', 'warehouse', 'category', 'brand'],
+    inventory: [
+      'stock',
+      'asset',
+      'product',
+      'warehouse',
+      'category',
+      'brand',
+      'uom',
+      'stock-transaction',
+      'dashboard',
+    ],
     mess: ['room', 'occupancy', 'site', 'block', 'floor'],
     building: ['building', 'room', 'maintenance', 'floor'],
     user: ['user', 'role', 'permission'],
@@ -285,20 +295,38 @@ export async function seedUserAccess(dataSource: DataSource): Promise<void> {
   }
   console.log(`  ✓ Assigned permissions to Inventory Manager role`);
 
-  // Seed Role-Permission mappings for Inventory Staff (read only)
+  // Seed Role-Permission mappings for Inventory Staff
+  // Inventory Staff can: read all inventory features + create stock transactions
   const inventoryStaffRole = savedRoles['INVENTORY_STAFF'];
   for (const permission of Object.values(savedPermissions)) {
-    if (permission.module === 'inventory' && permission.action === 'read') {
-      const exists = await rolePermissionRepo.findOne({
-        where: { roleId: inventoryStaffRole.id, permissionId: permission.id },
-      });
-      if (!exists) {
-        await rolePermissionRepo.save(
-          rolePermissionRepo.create({
-            roleId: inventoryStaffRole.id,
-            permissionId: permission.id,
-          }),
-        );
+    if (permission.module === 'inventory') {
+      // Allow read for all inventory features
+      if (permission.action === 'read') {
+        const exists = await rolePermissionRepo.findOne({
+          where: { roleId: inventoryStaffRole.id, permissionId: permission.id },
+        });
+        if (!exists) {
+          await rolePermissionRepo.save(
+            rolePermissionRepo.create({
+              roleId: inventoryStaffRole.id,
+              permissionId: permission.id,
+            }),
+          );
+        }
+      }
+      // Allow create for stock-transaction feature (inbound, outbound, adjustment, transfer)
+      if (permission.feature === 'stock-transaction' && permission.action === 'create') {
+        const exists = await rolePermissionRepo.findOne({
+          where: { roleId: inventoryStaffRole.id, permissionId: permission.id },
+        });
+        if (!exists) {
+          await rolePermissionRepo.save(
+            rolePermissionRepo.create({
+              roleId: inventoryStaffRole.id,
+              permissionId: permission.id,
+            }),
+          );
+        }
       }
     }
   }

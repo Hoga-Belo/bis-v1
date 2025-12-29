@@ -141,10 +141,54 @@ export const excelUploadConfig = {
 };
 
 /**
+ * Configuration for product photo uploads
+ * - Accepts: jpg, jpeg, png, gif
+ * - Max size: 5MB
+ * - Storage: ./uploads/products
+ */
+export const productPhotoUploadConfig = {
+  storage: diskStorage({
+    destination: (
+      _req: Request,
+      _file: Express.Multer.File,
+      callback: DestinationCallback,
+    ) => {
+      callback(null, './uploads/products');
+    },
+    filename: (
+      _req: Request,
+      file: Express.Multer.File,
+      callback: FilenameCallback,
+    ) => {
+      const uniqueName = `product-${uuidv4()}-${Date.now()}${extname(file.originalname)}`;
+      callback(null, uniqueName);
+    },
+  }),
+  fileFilter: (
+    _req: Request,
+    file: Express.Multer.File,
+    callback: FileFilterCallback,
+  ) => {
+    if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+      return callback(
+        new BadRequestException(
+          'Only image files (jpg, jpeg, png, gif) are allowed',
+        ),
+      );
+    }
+    callback(null, true);
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+};
+
+/**
  * Upload directories configuration
  */
 export const uploadDirectories = {
   photos: './uploads/photos',
   documents: './uploads/documents',
   temp: './uploads/temp',
+  products: './uploads/products',
 };

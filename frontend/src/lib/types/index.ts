@@ -6,3 +6,4 @@ export * from './audit';
 export * from './hr';
 export * from './attendance';
 export * from './leave';
+export * from './inventory';

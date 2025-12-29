@@ -489,6 +489,161 @@ Bebang BIS addresses the operational challenges of PT Prima Sarana Gemilang (Sit
 - `hr:leave:read` - View leave requests
 - `hr:leave:approve` - Approve/reject leave requests (managers)
 
+### Inventory Module (Implemented)
+
+#### Category Management
+- Create, read, update, delete categories
+- Fields: code (unique), name, description, categoryType
+- **Category Types**:
+  - **FIXED**: Aset Tetap (Fixed Assets) - long-term assets like equipment, vehicles
+  - **CONSUMABLE**: Barang Habis Pakai (Consumables) - items that are used up
+- Search and filter with pagination
+- Soft delete with validation (cannot delete if products exist)
+
+#### Brand Management
+- Create, read, update, delete brands
+- Fields: code (unique), name, description
+- Search and filter with pagination
+- Soft delete for data recovery
+
+#### UOM (Unit of Measure) Management
+- Create, read, update, delete units of measure
+- Fields: code (unique), name, description
+- Examples: PCS (Pieces), BOX, KG, LITER, METER
+- Search and filter with pagination
+- Soft delete for data recovery
+
+#### Product Management
+- Create, read, update, delete products
+- Fields: code (unique), name, description, category, brand, UOM, minimumStock, photoUrl
+- **Photo Upload**:
+  - Supported formats: JPG, JPEG, PNG, GIF
+  - Maximum file size: 5MB
+  - Storage in `uploads/products/` directory
+  - Automatic file naming with unique suffix
+- **Stock Tracking**:
+  - Current stock per warehouse
+  - Minimum stock threshold for alerts
+  - Stock status indicators (healthy, low, out of stock)
+- **Movement History**:
+  - View all stock transactions for a product
+  - Filter by date range and transaction type
+  - Chronological display with transaction details
+- Search by code, name, or description
+- Filter by category, brand, stock status
+- Pagination with configurable page size
+
+#### Warehouse Management
+- Create, read, update, delete warehouses
+- Fields: code (unique), name, address, workLocationId, picEmployeeId, isActive
+- **HR Integration**:
+  - Link to WorkLocation from HR module
+  - Link to Employee as Person In Charge (PIC)
+  - Both are optional but recommended for proper management
+- **Stock Summary**:
+  - View all products and quantities in warehouse
+  - Filter by category or stock status
+  - Export stock report
+- **Statistics**:
+  - Total products count
+  - Total stock quantity
+  - Low stock items count
+  - Recent transactions count
+- Search and filter with pagination
+- Soft delete for data recovery
+
+#### Stock Transactions
+- **Transaction Types**:
+  - **INBOUND**: Barang Masuk - receiving stock into warehouse
+  - **OUTBOUND**: Barang Keluar - issuing stock from warehouse
+  - **ADJUSTMENT**: Penyesuaian Stok - correcting stock quantities
+  - **TRANSFER**: Transfer Antar Gudang - moving stock between warehouses
+- **Auto-Generated Transaction Numbers**:
+  - Format: `PREFIX/YYYYMMDD/SEQUENCE`
+  - INBOUND: `IN/20251229/0001`
+  - OUTBOUND: `OUT/20251229/0001`
+  - ADJUSTMENT: `ADJ/20251229/0001`
+  - TRANSFER: `TRF/20251229/0001`
+- **Transaction Fields**:
+  - Transaction number (auto-generated)
+  - Transaction type
+  - Product and warehouse
+  - Quantity
+  - Reference number (optional)
+  - Notes (optional)
+  - For transfers: source and destination warehouses
+- **Stock Updates**:
+  - Inbound: Creates/updates stock record, increases quantity
+  - Outbound: Validates sufficient stock, decreases quantity
+  - Adjustment: Sets quantity to new value (can increase or decrease)
+  - Transfer: Validates source stock, decreases source, increases destination
+- **Validation**:
+  - Outbound: Prevents if insufficient stock
+  - Transfer: Prevents if insufficient stock in source warehouse
+  - All: Validates product and warehouse exist
+- View transaction history with filtering
+- Transaction detail view with all information
+
+#### Inventory Dashboard
+- **Overview Metrics**:
+  - Total products count
+  - Total categories count
+  - Total brands count
+  - Total warehouses count
+  - Total stock value (if pricing enabled)
+  - Low stock items count
+  - Out of stock items count
+- **Stock Summary by Status**:
+  - Healthy: Stock > 50% of minimum
+  - Low: Stock ≤ 50% of minimum but > 0
+  - Out of Stock: Stock = 0
+- **Stock by Category**:
+  - Breakdown by category type (FIXED vs CONSUMABLE)
+  - Product count and total quantity per category
+- **Low Stock Alerts**:
+  - Products below minimum stock threshold
+  - Urgency levels:
+    - **Critical** (≤25%): Immediate action required
+    - **Warning** (≤50%): Attention needed
+  - Shows product name, warehouse, current vs minimum stock
+  - Quick navigation to product details
+- **Recent Transactions**:
+  - Latest stock movements
+  - Color-coded by transaction type
+  - Quick view of transaction details
+- **Quick Actions**:
+  - Create Inbound Transaction
+  - Create Outbound Transaction
+  - Create Transfer
+  - Create Adjustment
+  - Add New Product
+  - Add New Warehouse
+
+#### Permissions
+- `inventory:category:create` - Create categories
+- `inventory:category:read` - View categories
+- `inventory:category:update` - Update categories
+- `inventory:category:delete` - Delete categories
+- `inventory:brand:create` - Create brands
+- `inventory:brand:read` - View brands
+- `inventory:brand:update` - Update brands
+- `inventory:brand:delete` - Delete brands
+- `inventory:uom:create` - Create units of measure
+- `inventory:uom:read` - View units of measure
+- `inventory:uom:update` - Update units of measure
+- `inventory:uom:delete` - Delete units of measure
+- `inventory:product:create` - Create products
+- `inventory:product:read` - View products
+- `inventory:product:update` - Update products
+- `inventory:product:delete` - Delete products
+- `inventory:warehouse:create` - Create warehouses
+- `inventory:warehouse:read` - View warehouses
+- `inventory:warehouse:update` - Update warehouses
+- `inventory:warehouse:delete` - Delete warehouses
+- `inventory:stock:create` - Create stock transactions
+- `inventory:stock:read` - View stock records
+- `inventory:dashboard:read` - View inventory dashboard
+
 ### User Management
 - Create, read, update, delete users
 - Assign multiple roles to users

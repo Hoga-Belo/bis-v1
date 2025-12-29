@@ -105,7 +105,46 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/seeders/master-data.seeder.ts` | Seeds provinces, cities, blood types, religions, etc. |
 | `src/seeders/user-access.seeder.ts` | Seeds roles, permissions, and admin user |
 | `src/seeders/hr.seeder.ts` | Seeds departments, divisions, positions, job grades |
+| `src/seeders/inventory.seeder.ts` | Seeds categories, brands, UOMs, products, warehouses |
 | `src/types/` | TypeScript type declarations for external modules |
+| `src/modules/inventory/` | Inventory module (categories, brands, UOMs, products, warehouses, stock transactions, dashboard) |
+| `src/modules/inventory/inventory.module.ts` | Main Inventory module aggregating all sub-modules |
+| `src/modules/inventory/categories/` | Category management (CRUD with CategoryType) |
+| `src/modules/inventory/categories/categories.module.ts` | Category module definition |
+| `src/modules/inventory/categories/categories.service.ts` | Category business logic (CRUD, soft delete validation) |
+| `src/modules/inventory/categories/categories.controller.ts` | Category REST endpoints with Swagger documentation |
+| `src/modules/inventory/categories/dto/` | Category DTOs (CreateCategoryDto, UpdateCategoryDto, CategoryQueryDto) |
+| `src/modules/inventory/brands/` | Brand management (CRUD) |
+| `src/modules/inventory/brands/brands.module.ts` | Brand module definition |
+| `src/modules/inventory/brands/brands.service.ts` | Brand business logic (CRUD with search and pagination) |
+| `src/modules/inventory/brands/brands.controller.ts` | Brand REST endpoints with Swagger documentation |
+| `src/modules/inventory/brands/dto/` | Brand DTOs (CreateBrandDto, UpdateBrandDto, BrandQueryDto) |
+| `src/modules/inventory/uoms/` | UOM (Unit of Measure) management (CRUD) |
+| `src/modules/inventory/uoms/uoms.module.ts` | UOM module definition |
+| `src/modules/inventory/uoms/uoms.service.ts` | UOM business logic (CRUD with search and pagination) |
+| `src/modules/inventory/uoms/uoms.controller.ts` | UOM REST endpoints with Swagger documentation |
+| `src/modules/inventory/uoms/dto/` | UOM DTOs (CreateUomDto, UpdateUomDto, UomQueryDto) |
+| `src/modules/inventory/products/` | Product management (CRUD with photo upload) |
+| `src/modules/inventory/products/products.module.ts` | Product module definition with Multer config |
+| `src/modules/inventory/products/products.service.ts` | Product business logic (CRUD, photo upload, movement history) |
+| `src/modules/inventory/products/products.controller.ts` | Product REST endpoints with Swagger documentation |
+| `src/modules/inventory/products/dto/` | Product DTOs (CreateProductDto, UpdateProductDto, ProductQueryDto) |
+| `src/modules/inventory/warehouses/` | Warehouse management (CRUD with HR integration) |
+| `src/modules/inventory/warehouses/warehouses.module.ts` | Warehouse module definition |
+| `src/modules/inventory/warehouses/warehouses.service.ts` | Warehouse business logic (CRUD, stock summary, statistics) |
+| `src/modules/inventory/warehouses/warehouses.controller.ts` | Warehouse REST endpoints with Swagger documentation |
+| `src/modules/inventory/warehouses/dto/` | Warehouse DTOs (CreateWarehouseDto, UpdateWarehouseDto, WarehouseQueryDto) |
+| `src/modules/inventory/stock-transactions/` | Stock transaction management (Inbound, Outbound, Adjustment, Transfer) |
+| `src/modules/inventory/stock-transactions/stock-transactions.module.ts` | Stock transaction module definition |
+| `src/modules/inventory/stock-transactions/stock-transactions.service.ts` | Stock transaction business logic (create transactions, update stock) |
+| `src/modules/inventory/stock-transactions/stock-transactions.controller.ts` | Stock transaction REST endpoints with Swagger documentation |
+| `src/modules/inventory/stock-transactions/dto/` | Stock transaction DTOs (CreateInboundDto, CreateOutboundDto, CreateAdjustmentDto, CreateTransferDto, StockTransactionQueryDto) |
+| `src/modules/inventory/dashboard/` | Inventory dashboard (metrics, alerts) |
+| `src/modules/inventory/dashboard/dashboard.module.ts` | Dashboard module definition |
+| `src/modules/inventory/dashboard/dashboard.service.ts` | Dashboard business logic (overview, stock summary, low stock alerts) |
+| `src/modules/inventory/dashboard/dashboard.controller.ts` | Dashboard REST endpoints with Swagger documentation |
+| `src/modules/inventory/dashboard/dto/` | Dashboard DTOs (DashboardMetricsDto) |
+| `uploads/products/` | Product photo storage directory |
 
 ### Frontend (`frontend/`)
 | Path | Description |
@@ -206,6 +245,49 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/app/(dashboard)/hr/leave-requests/create/page.tsx` | Submit new leave request |
 | `src/app/(dashboard)/hr/leave-requests/[id]/page.tsx` | Leave request detail with approval actions |
 | `src/app/(dashboard)/hr/leave-requests/approvals/page.tsx` | Pending approvals for managers |
+| `src/app/(dashboard)/inventory/` | Inventory module pages |
+| `src/app/(dashboard)/inventory/layout.tsx` | Inventory layout with sidebar navigation |
+| `src/app/(dashboard)/inventory/page.tsx` | Inventory Dashboard with metrics, alerts, quick actions |
+| `src/app/(dashboard)/inventory/categories/` | Category pages (list, create, edit) |
+| `src/app/(dashboard)/inventory/categories/page.tsx` | Category list page |
+| `src/app/(dashboard)/inventory/categories/create/page.tsx` | Category create page |
+| `src/app/(dashboard)/inventory/categories/[id]/page.tsx` | Category edit page |
+| `src/app/(dashboard)/inventory/brands/` | Brand pages (list, create, edit) |
+| `src/app/(dashboard)/inventory/brands/page.tsx` | Brand list page |
+| `src/app/(dashboard)/inventory/brands/create/page.tsx` | Brand create page |
+| `src/app/(dashboard)/inventory/brands/[id]/page.tsx` | Brand edit page |
+| `src/app/(dashboard)/inventory/uoms/` | UOM pages (list, create, edit) |
+| `src/app/(dashboard)/inventory/uoms/page.tsx` | UOM list page |
+| `src/app/(dashboard)/inventory/uoms/create/page.tsx` | UOM create page |
+| `src/app/(dashboard)/inventory/uoms/[id]/page.tsx` | UOM edit page |
+| `src/app/(dashboard)/inventory/products/` | Product pages (list, detail, create, edit) |
+| `src/app/(dashboard)/inventory/products/page.tsx` | Product list page with search, filter, pagination |
+| `src/app/(dashboard)/inventory/products/create/page.tsx` | Product create page |
+| `src/app/(dashboard)/inventory/products/[id]/page.tsx` | Product detail page with stock info |
+| `src/app/(dashboard)/inventory/products/[id]/edit/page.tsx` | Product edit page |
+| `src/app/(dashboard)/inventory/warehouses/` | Warehouse pages (list, detail, create, edit) |
+| `src/app/(dashboard)/inventory/warehouses/page.tsx` | Warehouse list page |
+| `src/app/(dashboard)/inventory/warehouses/create/page.tsx` | Warehouse create page |
+| `src/app/(dashboard)/inventory/warehouses/[id]/page.tsx` | Warehouse detail page with stock summary |
+| `src/app/(dashboard)/inventory/warehouses/[id]/edit/page.tsx` | Warehouse edit page |
+| `src/app/(dashboard)/inventory/stock-transactions/` | Stock transaction pages |
+| `src/app/(dashboard)/inventory/stock-transactions/page.tsx` | Transaction list page |
+| `src/app/(dashboard)/inventory/stock-transactions/[id]/page.tsx` | Transaction detail page |
+| `src/app/(dashboard)/inventory/stock-transactions/inbound/page.tsx` | Inbound transaction form |
+| `src/app/(dashboard)/inventory/stock-transactions/outbound/page.tsx` | Outbound transaction form |
+| `src/app/(dashboard)/inventory/stock-transactions/adjustment/page.tsx` | Adjustment transaction form |
+| `src/app/(dashboard)/inventory/stock-transactions/transfer/page.tsx` | Transfer transaction form |
+| `src/components/inventory/` | Inventory components |
+| `src/components/inventory/index.ts` | Main exports |
+| `src/components/inventory/categories/` | Category components (CategoryTable, CategoryForm) |
+| `src/components/inventory/brands/` | Brand components (BrandTable, BrandForm) |
+| `src/components/inventory/uoms/` | UOM components (UomTable, UomForm) |
+| `src/components/inventory/products/` | Product components (ProductTable, ProductForm, ProductPhotoUpload, ProductStockCard, ProductMovementHistory) |
+| `src/components/inventory/warehouses/` | Warehouse components (WarehouseTable, WarehouseForm, WarehouseStockSummary, WarehouseStatisticsCard) |
+| `src/components/inventory/stock-transactions/` | Stock transaction components (StockTransactionTable, StockTransactionDetailCard, InboundForm, OutboundForm, AdjustmentForm, TransferForm) |
+| `src/components/inventory/dashboard/` | Dashboard components (InventoryOverviewCard, StockSummaryCard, LowStockAlertsCard, RecentTransactionsCard, QuickActionsCard) |
+| `src/lib/types/inventory.ts` | Inventory types (Category, Brand, Uom, Product, Warehouse, Stock, StockTransaction, CategoryType, TransactionType) |
+| `src/lib/api/endpoints/inventory.ts` | Inventory API client (categories, brands, uoms, products, warehouses, stockTransactions, dashboard) |
 
 ## Key Technical Decisions
 
@@ -460,7 +542,29 @@ Examples:
 - hr:leave:create            - Submit leave request
 - hr:leave:read              - View leave requests
 - hr:leave:approve           - Approve/reject leave requests
+- inventory:category:create  - Create categories
+- inventory:category:read    - View categories
+- inventory:category:update  - Update categories
+- inventory:category:delete  - Delete categories
+- inventory:brand:create     - Create brands
+- inventory:brand:read       - View brands
+- inventory:brand:update     - Update brands
+- inventory:brand:delete     - Delete brands
+- inventory:uom:create       - Create units of measure
+- inventory:uom:read         - View units of measure
+- inventory:uom:update       - Update units of measure
+- inventory:uom:delete       - Delete units of measure
 - inventory:product:create   - Create products
+- inventory:product:read     - View products
+- inventory:product:update   - Update products
+- inventory:product:delete   - Delete products
+- inventory:warehouse:create - Create warehouses
+- inventory:warehouse:read   - View warehouses
+- inventory:warehouse:update - Update warehouses
+- inventory:warehouse:delete - Delete warehouses
+- inventory:stock:create     - Create stock transactions
+- inventory:stock:read       - View stock records
+- inventory:dashboard:read   - View inventory dashboard
 - audit:log:read             - View audit logs
 ```
 
@@ -671,6 +775,288 @@ const status = isLate ? AttendanceStatus.LATE : AttendanceStatus.PRESENT;
 | `/hr/leave-requests/:id/approve` | POST | `hr:leave:approve` | Approve leave request |
 | `/hr/leave-requests/:id/reject` | POST | `hr:leave:approve` | Reject leave request with reason |
 | `/hr/leave-requests/:id/cancel` | POST | `hr:leave:create` | Cancel own pending leave request |
+
+### Inventory Module API Endpoints
+
+| Endpoint | Method | Permission | Description |
+|----------|--------|------------|-------------|
+| `/inventory/categories` | GET | `inventory:category:read` | List categories with pagination |
+| `/inventory/categories` | POST | `inventory:category:create` | Create category |
+| `/inventory/categories/:id` | GET | `inventory:category:read` | Get category by ID |
+| `/inventory/categories/:id` | PATCH | `inventory:category:update` | Update category |
+| `/inventory/categories/:id` | DELETE | `inventory:category:delete` | Soft delete category |
+| `/inventory/brands` | GET | `inventory:brand:read` | List brands with pagination |
+| `/inventory/brands` | POST | `inventory:brand:create` | Create brand |
+| `/inventory/brands/:id` | GET | `inventory:brand:read` | Get brand by ID |
+| `/inventory/brands/:id` | PATCH | `inventory:brand:update` | Update brand |
+| `/inventory/brands/:id` | DELETE | `inventory:brand:delete` | Soft delete brand |
+| `/inventory/uoms` | GET | `inventory:uom:read` | List UOMs with pagination |
+| `/inventory/uoms` | POST | `inventory:uom:create` | Create UOM |
+| `/inventory/uoms/:id` | GET | `inventory:uom:read` | Get UOM by ID |
+| `/inventory/uoms/:id` | PATCH | `inventory:uom:update` | Update UOM |
+| `/inventory/uoms/:id` | DELETE | `inventory:uom:delete` | Soft delete UOM |
+| `/inventory/products` | GET | `inventory:product:read` | List products with pagination, search, filter |
+| `/inventory/products` | POST | `inventory:product:create` | Create product |
+| `/inventory/products/:id` | GET | `inventory:product:read` | Get product by ID with stock info |
+| `/inventory/products/:id` | PATCH | `inventory:product:update` | Update product |
+| `/inventory/products/:id` | DELETE | `inventory:product:delete` | Soft delete product |
+| `/inventory/products/:id/photo` | POST | `inventory:product:update` | Upload product photo |
+| `/inventory/products/:id/movement-history` | GET | `inventory:product:read` | Get product movement history |
+| `/inventory/warehouses` | GET | `inventory:warehouse:read` | List warehouses with pagination |
+| `/inventory/warehouses` | POST | `inventory:warehouse:create` | Create warehouse |
+| `/inventory/warehouses/:id` | GET | `inventory:warehouse:read` | Get warehouse by ID |
+| `/inventory/warehouses/:id` | PATCH | `inventory:warehouse:update` | Update warehouse |
+| `/inventory/warehouses/:id` | DELETE | `inventory:warehouse:delete` | Soft delete warehouse |
+| `/inventory/warehouses/:id/stock` | GET | `inventory:warehouse:read` | Get warehouse stock summary |
+| `/inventory/warehouses/:id/statistics` | GET | `inventory:warehouse:read` | Get warehouse statistics |
+| `/inventory/stock-transactions` | GET | `inventory:stock:read` | List stock transactions with pagination |
+| `/inventory/stock-transactions/:id` | GET | `inventory:stock:read` | Get stock transaction by ID |
+| `/inventory/stock-transactions/inbound` | POST | `inventory:stock:create` | Create inbound transaction |
+| `/inventory/stock-transactions/outbound` | POST | `inventory:stock:create` | Create outbound transaction |
+| `/inventory/stock-transactions/adjustment` | POST | `inventory:stock:create` | Create adjustment transaction |
+| `/inventory/stock-transactions/transfer` | POST | `inventory:stock:create` | Create transfer transaction |
+| `/inventory/dashboard/overview` | GET | `inventory:dashboard:read` | Get inventory overview metrics |
+| `/inventory/dashboard/stock-summary` | GET | `inventory:dashboard:read` | Get stock summary by status |
+| `/inventory/dashboard/recent-transactions` | GET | `inventory:dashboard:read` | Get recent transactions |
+| `/inventory/dashboard/low-stock-alerts` | GET | `inventory:dashboard:read` | Get low stock alerts |
+
+### Inventory Enums
+
+#### CategoryType Enum
+
+```typescript
+// backend/src/entities/inventory/category.entity.ts
+export enum CategoryType {
+  FIXED = 'FIXED',           // Aset Tetap (Fixed Assets)
+  CONSUMABLE = 'CONSUMABLE', // Barang Habis Pakai (Consumables)
+}
+```
+
+#### TransactionType Enum
+
+```typescript
+// backend/src/entities/inventory/stock-transaction.entity.ts
+export enum TransactionType {
+  INBOUND = 'INBOUND',       // Barang Masuk
+  OUTBOUND = 'OUTBOUND',     // Barang Keluar
+  ADJUSTMENT = 'ADJUSTMENT', // Penyesuaian Stok
+  TRANSFER = 'TRANSFER',     // Transfer Antar Gudang
+}
+```
+
+### Transaction Number Format
+
+Stock transactions use auto-generated transaction numbers with the following format:
+
+```typescript
+// Format: PREFIX/YYYYMMDD/SEQUENCE
+// Examples:
+// - INBOUND:    IN/20251229/0001
+// - OUTBOUND:   OUT/20251229/0001
+// - ADJUSTMENT: ADJ/20251229/0001
+// - TRANSFER:   TRF/20251229/0001
+
+// Generation logic in stock-transactions.service.ts
+private async generateTransactionNumber(type: TransactionType): Promise<string> {
+  const prefix = {
+    [TransactionType.INBOUND]: 'IN',
+    [TransactionType.OUTBOUND]: 'OUT',
+    [TransactionType.ADJUSTMENT]: 'ADJ',
+    [TransactionType.TRANSFER]: 'TRF',
+  }[type];
+  
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+  
+  // Get count of transactions today
+  const count = await this.stockTransactionRepository.count({
+    where: {
+      transactionType: type,
+      createdAt: Between(startOfDay(today), endOfDay(today)),
+    },
+  });
+  
+  const sequence = String(count + 1).padStart(4, '0');
+  return `${prefix}/${dateStr}/${sequence}`;
+}
+```
+
+### Stock Transaction Logic
+
+```typescript
+// Inbound: Creates/updates stock record, increases quantity
+async createInbound(dto: CreateInboundDto): Promise<StockTransaction> {
+  // Find or create stock record
+  let stock = await this.stockRepository.findOne({
+    where: { productId: dto.productId, warehouseId: dto.warehouseId },
+  });
+  
+  if (stock) {
+    stock.quantity += dto.quantity;
+  } else {
+    stock = this.stockRepository.create({
+      productId: dto.productId,
+      warehouseId: dto.warehouseId,
+      quantity: dto.quantity,
+    });
+  }
+  
+  await this.stockRepository.save(stock);
+  // Create transaction record...
+}
+
+// Outbound: Validates sufficient stock, decreases quantity
+async createOutbound(dto: CreateOutboundDto): Promise<StockTransaction> {
+  const stock = await this.stockRepository.findOne({
+    where: { productId: dto.productId, warehouseId: dto.warehouseId },
+  });
+  
+  if (!stock || stock.quantity < dto.quantity) {
+    throw new BadRequestException('Insufficient stock');
+  }
+  
+  stock.quantity -= dto.quantity;
+  await this.stockRepository.save(stock);
+  // Create transaction record...
+}
+
+// Adjustment: Sets quantity to new value
+async createAdjustment(dto: CreateAdjustmentDto): Promise<StockTransaction> {
+  let stock = await this.stockRepository.findOne({
+    where: { productId: dto.productId, warehouseId: dto.warehouseId },
+  });
+  
+  const oldQuantity = stock?.quantity || 0;
+  const adjustmentQuantity = dto.newQuantity - oldQuantity;
+  
+  if (stock) {
+    stock.quantity = dto.newQuantity;
+  } else {
+    stock = this.stockRepository.create({
+      productId: dto.productId,
+      warehouseId: dto.warehouseId,
+      quantity: dto.newQuantity,
+    });
+  }
+  
+  await this.stockRepository.save(stock);
+  // Create transaction record with adjustmentQuantity...
+}
+
+// Transfer: Validates source stock, decreases source, increases destination
+async createTransfer(dto: CreateTransferDto): Promise<StockTransaction> {
+  // Validate source stock
+  const sourceStock = await this.stockRepository.findOne({
+    where: { productId: dto.productId, warehouseId: dto.sourceWarehouseId },
+  });
+  
+  if (!sourceStock || sourceStock.quantity < dto.quantity) {
+    throw new BadRequestException('Insufficient stock in source warehouse');
+  }
+  
+  // Decrease source
+  sourceStock.quantity -= dto.quantity;
+  await this.stockRepository.save(sourceStock);
+  
+  // Increase destination
+  let destStock = await this.stockRepository.findOne({
+    where: { productId: dto.productId, warehouseId: dto.destinationWarehouseId },
+  });
+  
+  if (destStock) {
+    destStock.quantity += dto.quantity;
+  } else {
+    destStock = this.stockRepository.create({
+      productId: dto.productId,
+      warehouseId: dto.destinationWarehouseId,
+      quantity: dto.quantity,
+    });
+  }
+  
+  await this.stockRepository.save(destStock);
+  // Create transaction record...
+}
+```
+
+### Warehouse-HR Integration
+
+Warehouses can be linked to HR entities for better management:
+
+```typescript
+// backend/src/entities/inventory/warehouse.entity.ts
+@Entity('warehouses')
+export class Warehouse extends BaseEntity {
+  @Column()
+  code: string;
+
+  @Column()
+  name: string;
+
+  @Column({ nullable: true })
+  address: string;
+
+  // Link to WorkLocation from HR module
+  @Column({ name: 'work_location_id', nullable: true })
+  workLocationId: string;
+
+  @ManyToOne(() => WorkLocation)
+  @JoinColumn({ name: 'work_location_id' })
+  workLocation: WorkLocation;
+
+  // Link to Employee as Person In Charge
+  @Column({ name: 'pic_employee_id', nullable: true })
+  picEmployeeId: string;
+
+  @ManyToOne(() => Employee)
+  @JoinColumn({ name: 'pic_employee_id' })
+  picEmployee: Employee;
+
+  @Column({ default: true })
+  isActive: boolean;
+}
+```
+
+### Inventory Dashboard Metrics
+
+```typescript
+// Dashboard overview response
+interface DashboardOverview {
+  totalProducts: number;
+  totalCategories: number;
+  totalBrands: number;
+  totalWarehouses: number;
+  totalStockValue: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+}
+
+// Stock summary by status
+interface StockSummary {
+  healthy: number;      // Stock > 50% of minimum
+  low: number;          // Stock <= 50% of minimum but > 0
+  outOfStock: number;   // Stock = 0
+  byCategory: {
+    categoryId: string;
+    categoryName: string;
+    categoryType: CategoryType;
+    totalProducts: number;
+    totalQuantity: number;
+  }[];
+}
+
+// Low stock alert
+interface LowStockAlert {
+  productId: string;
+  productCode: string;
+  productName: string;
+  warehouseId: string;
+  warehouseName: string;
+  currentStock: number;
+  minimumStock: number;
+  percentage: number;    // currentStock / minimumStock * 100
+  urgency: 'critical' | 'warning';  // critical <= 25%, warning <= 50%
+}
+```
 
 ### Leave Statistics Response Shape (Flattened)
 

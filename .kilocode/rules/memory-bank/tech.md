@@ -761,3 +761,414 @@ async approve(id: string, approverId: string, notes?: string): Promise<LeaveRequ
   return request;
 }
 ```
+
+### Inventory Module Technical Implementation
+
+The Inventory module provides comprehensive stock and product management with the following technical patterns.
+
+#### Product Photo Upload Configuration
+
+Product photos are stored in `uploads/products/` directory with unique filenames.
+
+**Configuration** ([`upload.config.ts`](backend/src/config/upload.config.ts)):
+```typescript
+export const productPhotoUploadConfig = {
+  storage: diskStorage({
+    destination: './uploads/products',
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, `product-${uniqueSuffix}${extname(file.originalname)}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+      cb(new BadRequestException('Only image files are allowed'), false);
+    }
+    cb(null, true);
+  },
+};
+```
+
+**Usage in Controller** ([`products.controller.ts`](backend/src/modules/inventory/products/products.controller.ts)):
+```typescript
+@Post(':id/photo')
+@UseInterceptors(FileInterceptor('file', productPhotoUploadConfig))
+async uploadPhoto(
+  @Param('id') id: string,
+  @UploadedFile() file: Express.Multer.File,
+): Promise<Product> {
+  return this.productsService.uploadPhoto(id, file);
+}
+```
+
+#### Stock Transaction Logic
+
+The stock transaction service handles four types of transactions with automatic stock updates.
+
+**Transaction Number Generation** ([`stock-transactions.service.ts`](backend/src/modules/inventory/stock-transactions/stock-transactions.service.ts)):
+```typescript
+private async generateTransactionNumber(type: TransactionType): Promise<string> {
+  const prefix = {
+    [TransactionType.INBOUND]: 'IN',
+    [TransactionType.OUTBOUND]: 'OUT',
+    [TransactionType.ADJUSTMENT]: 'ADJ',
+    [TransactionType.TRANSFER]: 'TRF',
+  }[type];
+  
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+  
+  // Get count of transactions today for sequence
+  const count = await this.stockTransactionRepository.count({
+    where: {
+      transactionType: type,
+      createdAt: Between(startOfDay(today), endOfDay(today)),
+    },
+  });
+  
+  const sequence = String(count + 1).padStart(4, '0');
+  return `${prefix}/${dateStr}/${sequence}`;
+}
+```
+
+**Inbound Transaction** - Creates or updates stock, increases quantity:
+```typescript
+async createInbound(dto: CreateInboundDto): Promise<StockTransaction> {
+  // Find or create stock record
+  let stock = await this.stockRepository.findOne({
+    where: { productId: dto.productId, warehouseId: dto.warehouseId },
+  });
+  
+  if (stock) {
+    stock.quantity += dto.quantity;
+  } else {
+    stock = this.stockRepository.create({
+      productId: dto.productId,
+      warehouseId: dto.warehouseId,
+      quantity: dto.quantity,
+    });
+  }
+  
+  await this.stockRepository.save(stock);
+  
+  // Create transaction record
+  const transactionNumber = await this.generateTransactionNumber(TransactionType.INBOUND);
+  return this.stockTransactionRepository.save({
+    transactionNumber,
+    transactionType: TransactionType.INBOUND,
+    productId: dto.productId,
+    warehouseId: dto.warehouseId,
+    quantity: dto.quantity,
+    referenceNumber: dto.referenceNumber,
+    notes: dto.notes,
+  });
+}
+```
+
+**Outbound Transaction** - Validates stock, decreases quantity:
+```typescript
+async createOutbound(dto: CreateOutboundDto): Promise<StockTransaction> {
+  const stock = await this.stockRepository.findOne({
+    where: { productId: dto.productId, warehouseId: dto.warehouseId },
+  });
+  
+  if (!stock || stock.quantity < dto.quantity) {
+    throw new BadRequestException('Insufficient stock');
+  }
+  
+  stock.quantity -= dto.quantity;
+  await this.stockRepository.save(stock);
+  
+  // Create transaction record...
+}
+```
+
+**Adjustment Transaction** - Sets quantity to new value:
+```typescript
+async createAdjustment(dto: CreateAdjustmentDto): Promise<StockTransaction> {
+  let stock = await this.stockRepository.findOne({
+    where: { productId: dto.productId, warehouseId: dto.warehouseId },
+  });
+  
+  const oldQuantity = stock?.quantity || 0;
+  const adjustmentQuantity = dto.newQuantity - oldQuantity;
+  
+  if (stock) {
+    stock.quantity = dto.newQuantity;
+  } else {
+    stock = this.stockRepository.create({
+      productId: dto.productId,
+      warehouseId: dto.warehouseId,
+      quantity: dto.newQuantity,
+    });
+  }
+  
+  await this.stockRepository.save(stock);
+  
+  // Create transaction record with adjustmentQuantity...
+}
+```
+
+**Transfer Transaction** - Moves stock between warehouses:
+```typescript
+async createTransfer(dto: CreateTransferDto): Promise<StockTransaction> {
+  // Validate source stock
+  const sourceStock = await this.stockRepository.findOne({
+    where: { productId: dto.productId, warehouseId: dto.sourceWarehouseId },
+  });
+  
+  if (!sourceStock || sourceStock.quantity < dto.quantity) {
+    throw new BadRequestException('Insufficient stock in source warehouse');
+  }
+  
+  // Decrease source
+  sourceStock.quantity -= dto.quantity;
+  await this.stockRepository.save(sourceStock);
+  
+  // Increase destination
+  let destStock = await this.stockRepository.findOne({
+    where: { productId: dto.productId, warehouseId: dto.destinationWarehouseId },
+  });
+  
+  if (destStock) {
+    destStock.quantity += dto.quantity;
+  } else {
+    destStock = this.stockRepository.create({
+      productId: dto.productId,
+      warehouseId: dto.destinationWarehouseId,
+      quantity: dto.quantity,
+    });
+  }
+  
+  await this.stockRepository.save(destStock);
+  
+  // Create transaction record...
+}
+```
+
+#### Warehouse-HR Integration
+
+Warehouses can be linked to HR entities for better management and accountability.
+
+**Entity Definition** ([`warehouse.entity.ts`](backend/src/entities/inventory/warehouse.entity.ts)):
+```typescript
+@Entity('warehouses')
+export class Warehouse extends BaseEntity {
+  @Column()
+  code: string;
+
+  @Column()
+  name: string;
+
+  @Column({ nullable: true })
+  address: string;
+
+  // Link to WorkLocation from HR module
+  @Column({ name: 'work_location_id', nullable: true })
+  workLocationId: string;
+
+  @ManyToOne(() => WorkLocation)
+  @JoinColumn({ name: 'work_location_id' })
+  workLocation: WorkLocation;
+
+  // Link to Employee as Person In Charge
+  @Column({ name: 'pic_employee_id', nullable: true })
+  picEmployeeId: string;
+
+  @ManyToOne(() => Employee)
+  @JoinColumn({ name: 'pic_employee_id' })
+  picEmployee: Employee;
+
+  @Column({ default: true })
+  isActive: boolean;
+}
+```
+
+**Benefits of HR Integration**:
+- **WorkLocation Link**: Associates warehouse with a physical work location from HR module
+- **PIC Employee Link**: Assigns responsibility to a specific employee
+- **Audit Trail**: Changes tracked with employee context
+- **Reporting**: Generate reports by location or responsible person
+
+#### Inventory Dashboard Metrics
+
+The dashboard service calculates real-time metrics for inventory overview.
+
+**Overview Metrics** ([`dashboard.service.ts`](backend/src/modules/inventory/dashboard/dashboard.service.ts)):
+```typescript
+async getOverview(): Promise<DashboardOverview> {
+  const [
+    totalProducts,
+    totalCategories,
+    totalBrands,
+    totalWarehouses,
+    lowStockCount,
+    outOfStockCount,
+  ] = await Promise.all([
+    this.productRepository.count({ where: { deletedAt: IsNull() } }),
+    this.categoryRepository.count({ where: { deletedAt: IsNull() } }),
+    this.brandRepository.count({ where: { deletedAt: IsNull() } }),
+    this.warehouseRepository.count({ where: { deletedAt: IsNull() } }),
+    this.getLowStockCount(),
+    this.getOutOfStockCount(),
+  ]);
+
+  return {
+    totalProducts,
+    totalCategories,
+    totalBrands,
+    totalWarehouses,
+    lowStockCount,
+    outOfStockCount,
+  };
+}
+```
+
+**Low Stock Alert Logic**:
+```typescript
+async getLowStockAlerts(): Promise<LowStockAlert[]> {
+  const stocks = await this.stockRepository
+    .createQueryBuilder('stock')
+    .innerJoinAndSelect('stock.product', 'product')
+    .innerJoinAndSelect('stock.warehouse', 'warehouse')
+    .where('product.minimumStock > 0')
+    .andWhere('stock.quantity <= product.minimumStock')
+    .andWhere('product.deletedAt IS NULL')
+    .getMany();
+
+  return stocks.map(stock => {
+    const percentage = (stock.quantity / stock.product.minimumStock) * 100;
+    return {
+      productId: stock.productId,
+      productCode: stock.product.code,
+      productName: stock.product.name,
+      warehouseId: stock.warehouseId,
+      warehouseName: stock.warehouse.name,
+      currentStock: stock.quantity,
+      minimumStock: stock.product.minimumStock,
+      percentage,
+      urgency: percentage <= 25 ? 'critical' : 'warning',
+    };
+  });
+}
+```
+
+#### Category Type Enum
+
+Categories are classified into two types for different handling.
+
+**Enum Definition** ([`category.entity.ts`](backend/src/entities/inventory/category.entity.ts)):
+```typescript
+export enum CategoryType {
+  FIXED = 'FIXED',           // Aset Tetap (Fixed Assets) - long-term assets
+  CONSUMABLE = 'CONSUMABLE', // Barang Habis Pakai (Consumables) - items that are used up
+}
+```
+
+**Usage**:
+- **FIXED**: Equipment, vehicles, machinery - tracked as assets with depreciation
+- **CONSUMABLE**: Office supplies, cleaning materials - tracked by quantity only
+
+#### Frontend Inventory Types
+
+**Type Definitions** ([`inventory.ts`](frontend/src/lib/types/inventory.ts)):
+```typescript
+export enum CategoryType {
+  FIXED = 'FIXED',
+  CONSUMABLE = 'CONSUMABLE',
+}
+
+export enum TransactionType {
+  INBOUND = 'INBOUND',
+  OUTBOUND = 'OUTBOUND',
+  ADJUSTMENT = 'ADJUSTMENT',
+  TRANSFER = 'TRANSFER',
+}
+
+export interface Product {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  categoryId: string;
+  category?: Category;
+  brandId?: string;
+  brand?: Brand;
+  uomId: string;
+  uom?: Uom;
+  minimumStock: number;
+  photoUrl?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StockTransaction {
+  id: string;
+  transactionNumber: string;
+  transactionType: TransactionType;
+  productId: string;
+  product?: Product;
+  warehouseId: string;
+  warehouse?: Warehouse;
+  sourceWarehouseId?: string;
+  sourceWarehouse?: Warehouse;
+  destinationWarehouseId?: string;
+  destinationWarehouse?: Warehouse;
+  quantity: number;
+  referenceNumber?: string;
+  notes?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+```
+
+#### Inventory API Client
+
+**API Endpoints** ([`inventory.ts`](frontend/src/lib/api/endpoints/inventory.ts)):
+```typescript
+export const inventoryApi = {
+  // Categories
+  categories: {
+    getAll: (params?: CategoryQueryParams) =>
+      client.get<PaginatedResponse<Category>>('/inventory/categories', { params }),
+    getById: (id: string) =>
+      client.get<Category>(`/inventory/categories/${id}`),
+    create: (data: CreateCategoryDto) =>
+      client.post<Category>('/inventory/categories', data),
+    update: (id: string, data: UpdateCategoryDto) =>
+      client.patch<Category>(`/inventory/categories/${id}`, data),
+    delete: (id: string) =>
+      client.delete(`/inventory/categories/${id}`),
+  },
+  
+  // Stock Transactions
+  stockTransactions: {
+    getAll: (params?: StockTransactionQueryParams) =>
+      client.get<PaginatedResponse<StockTransaction>>('/inventory/stock-transactions', { params }),
+    getById: (id: string) =>
+      client.get<StockTransaction>(`/inventory/stock-transactions/${id}`),
+    createInbound: (data: CreateInboundDto) =>
+      client.post<StockTransaction>('/inventory/stock-transactions/inbound', data),
+    createOutbound: (data: CreateOutboundDto) =>
+      client.post<StockTransaction>('/inventory/stock-transactions/outbound', data),
+    createAdjustment: (data: CreateAdjustmentDto) =>
+      client.post<StockTransaction>('/inventory/stock-transactions/adjustment', data),
+    createTransfer: (data: CreateTransferDto) =>
+      client.post<StockTransaction>('/inventory/stock-transactions/transfer', data),
+  },
+  
+  // Dashboard
+  dashboard: {
+    getOverview: () =>
+      client.get<DashboardOverview>('/inventory/dashboard/overview'),
+    getStockSummary: () =>
+      client.get<StockSummary>('/inventory/dashboard/stock-summary'),
+    getRecentTransactions: (limit?: number) =>
+      client.get<StockTransaction[]>('/inventory/dashboard/recent-transactions', { params: { limit } }),
+    getLowStockAlerts: () =>
+      client.get<LowStockAlert[]>('/inventory/dashboard/low-stock-alerts'),
+  },
+};
+```

@@ -7,6 +7,7 @@ import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { HrModule } from './modules/hr/hr.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards';
 import { AuditInterceptor } from './common/interceptors';
@@ -151,6 +152,7 @@ const entities = [
     RolesModule,
     AuditModule,
     HrModule,
+    InventoryModule,
   ],
   controllers: [],
   providers: [

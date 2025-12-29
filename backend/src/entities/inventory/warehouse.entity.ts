@@ -29,6 +29,9 @@ export class Warehouse extends BaseEntity {
   @JoinColumn({ name: 'pic_employee_id' })
   picEmployee: Employee;
 
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive: boolean;
+
   @OneToMany(() => Stock, (stock) => stock.warehouse)
   stocks: Stock[];
 }
