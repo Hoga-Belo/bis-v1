@@ -237,7 +237,8 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
   "passport-jwt": "^4.0.0",
   "bcrypt": "^5.0.0",
   "class-validator": "^0.14.0",
-  "class-transformer": "^0.5.0"
+  "class-transformer": "^0.5.0",
+  "exceljs": "^4.4.0"
 }
 ```
 
@@ -293,3 +294,65 @@ npm run seed
 - Manifest at `/manifest.json`
 - Icons in `/public/icons/`
 - Offline fallback page supported
+
+### Excel Processing
+
+The system uses `exceljs` library for Excel file operations in the Employee Import feature.
+
+**Template Generation** ([`excel-template.service.ts`](backend/src/modules/hr/employees/excel-template.service.ts)):
+- Creates workbook with 4 sheets (READ_ME, KARYAWAN_HEAD, KELUARGA_DETAIL, PENDIDIKAN_DETAIL)
+- Adds data validation dropdowns using cell references
+- Pre-populates master data (departments, positions, job grades, etc.) from database
+- Sets column widths and formats for usability
+- Locks header rows with protection
+
+**Import Processing** ([`excel-import.service.ts`](backend/src/modules/hr/employees/excel-import.service.ts)):
+- Parses uploaded Excel files using exceljs
+- Loads master data into Maps for O(1) lookup performance
+- Extracts data from multiple sheets (employees, family, education)
+- Links family and education records to employees via NIK (supports both new and existing employees)
+- Row-by-row validation with detailed error collection (includes row number for error tracking)
+- Uses TypeORM transactions for atomic inserts (all-or-nothing per valid row)
+- Performs database lookup for existing employees when attaching family/education records
+- Tracks separate success counts: `employeeSuccessCount`, `familySuccessCount`, `educationSuccessCount`
+- Cleans up temporary files after processing
+
+**Gender Code Mapping**:
+```typescript
+// Accepts multiple formats for gender input
+const genderMap = {
+  'L': Gender.MALE,
+  'LAKI-LAKI': Gender.MALE,
+  'MALE': Gender.MALE,
+  'P': Gender.FEMALE,
+  'PEREMPUAN': Gender.FEMALE,
+  'FEMALE': Gender.FEMALE,
+};
+```
+
+**Error Report Generation**:
+- Creates new workbook with ERRORS sheet
+- Includes columns: Row Number, NIK, Field, Error Message, Original Value
+- Reports unknown employee NIK errors for family/education sheets
+- Returns as downloadable buffer for user review
+- Enables users to fix errors and re-import
+
+**File Upload Configuration** ([`upload.config.ts`](backend/src/config/upload.config.ts)):
+```typescript
+export const excelUploadConfig = {
+  storage: diskStorage({
+    destination: './uploads/temp',
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, `import-${uniqueSuffix}${extname(file.originalname)}`);
+    },
+  }),
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB max
+  fileFilter: (req, file, cb) => {
+    if (!file.originalname.match(/\.(xlsx|xls)$/)) {
+      cb(new BadRequestException('Only Excel files are allowed'), false);
+    }
+    cb(null, true);
+  },
+};
+```

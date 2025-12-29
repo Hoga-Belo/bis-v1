@@ -6,3 +6,4 @@ export * from './employment-statuses';
 export * from './work-locations';
 export * from './organization';
 export * from './employees';
+export * from './attendance';

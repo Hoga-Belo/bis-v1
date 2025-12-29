@@ -449,3 +449,20 @@ export interface ContractExpiringEmployee {
   department: { id: string; name: string } | null;
   position: { id: string; name: string } | null;
 }
+
+// Excel Import types
+export interface ImportError {
+  rowNumber: number;
+  nik: string;
+  field: string;
+  message: string;
+  originalValue?: string;
+}
+
+export interface ImportResult {
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  errors: ImportError[];
+  errorReportPath?: string;
+}

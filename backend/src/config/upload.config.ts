@@ -96,9 +96,55 @@ export const documentUploadConfig = {
 };
 
 /**
+ * Configuration for Excel file uploads (employee import)
+ * - Accepts: xlsx, xls
+ * - Max size: 20MB
+ * - Storage: ./uploads/temp
+ */
+export const excelUploadConfig = {
+  storage: diskStorage({
+    destination: (
+      _req: Request,
+      _file: Express.Multer.File,
+      callback: DestinationCallback,
+    ) => {
+      callback(null, './uploads/temp');
+    },
+    filename: (
+      _req: Request,
+      file: Express.Multer.File,
+      callback: FilenameCallback,
+    ) => {
+      const uniqueName = `${uuidv4()}-${Date.now()}${extname(file.originalname)}`;
+      callback(null, uniqueName);
+    },
+  }),
+  fileFilter: (
+    _req: Request,
+    file: Express.Multer.File,
+    callback: FileFilterCallback,
+  ) => {
+    if (
+      !file.mimetype.match(
+        /\/(vnd.openxmlformats-officedocument.spreadsheetml.sheet|vnd.ms-excel)$/,
+      )
+    ) {
+      return callback(
+        new BadRequestException('Only Excel files (.xlsx, .xls) are allowed'),
+      );
+    }
+    callback(null, true);
+  },
+  limits: {
+    fileSize: 20 * 1024 * 1024, // 20MB
+  },
+};
+
+/**
  * Upload directories configuration
  */
 export const uploadDirectories = {
   photos: './uploads/photos',
   documents: './uploads/documents',
+  temp: './uploads/temp',
 };

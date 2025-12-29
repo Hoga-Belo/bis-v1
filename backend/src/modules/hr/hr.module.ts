@@ -11,6 +11,8 @@ import {
   EmployeeFamily,
   EmployeeEducation,
   EmployeeDocument,
+  Attendance,
+  LeaveRequest,
 } from '../../entities/hr';
 import { DivisionsModule } from './divisions/divisions.module';
 import { DepartmentsModule } from './departments/departments.module';
@@ -20,6 +22,9 @@ import { EmploymentStatusesModule } from './employment-statuses/employment-statu
 import { WorkLocationsModule } from './work-locations/work-locations.module';
 import { OrganizationModule } from './organization/organization.module';
 import { EmployeesModule } from './employees/employees.module';
+import { AttendanceModule } from './attendance/attendance.module';
+import { ApprovalModule } from './approval/approval.module';
+import { LeaveRequestsModule } from './leave-requests/leave-requests.module';
 
 @Module({
   imports: [
@@ -34,6 +39,8 @@ import { EmployeesModule } from './employees/employees.module';
       EmployeeFamily,
       EmployeeEducation,
       EmployeeDocument,
+      Attendance,
+      LeaveRequest,
     ]),
     DivisionsModule,
     DepartmentsModule,
@@ -43,6 +50,9 @@ import { EmployeesModule } from './employees/employees.module';
     WorkLocationsModule,
     OrganizationModule,
     EmployeesModule,
+    AttendanceModule,
+    ApprovalModule,
+    LeaveRequestsModule,
   ],
   exports: [
     DivisionsModule,
@@ -53,6 +63,9 @@ import { EmployeesModule } from './employees/employees.module';
     WorkLocationsModule,
     OrganizationModule,
     EmployeesModule,
+    AttendanceModule,
+    ApprovalModule,
+    LeaveRequestsModule,
   ],
 })
 export class HrModule {}

@@ -1,6 +1,7 @@
 'use client';
 
 import { UseFormReturn } from 'react-hook-form';
+import { AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   FormControl,
@@ -9,13 +10,32 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { usePermissions } from '@/lib/hooks/use-permissions';
 import type { EmployeeFormValues } from '../employee-form';
 
 interface PayrollSectionProps {
   form: UseFormReturn<EmployeeFormValues>;
+  isEditMode?: boolean;
 }
 
-export function PayrollSection({ form }: PayrollSectionProps) {
+export function PayrollSection({ form, isEditMode = false }: PayrollSectionProps) {
+  const { can } = usePermissions();
+  
+  // Check write permission based on mode
+  const hasWritePermission = isEditMode
+    ? can('hr:employee:update:payroll')
+    : can('hr:employee:create:payroll');
+
+  // If no write permission, show read-only message
+  if (!hasWritePermission) {
+    return (
+      <div className="flex items-center gap-2 p-4 text-muted-foreground bg-muted/50 rounded-md">
+        <AlertCircle className="h-5 w-5" />
+        <span>Anda tidak memiliki izin untuk {isEditMode ? 'mengubah' : 'mengisi'} informasi penggajian.</span>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FormField

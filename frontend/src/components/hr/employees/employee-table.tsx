@@ -52,6 +52,7 @@ import {
   ChevronLeft,
   ChevronRight,
   UserPlus,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -177,12 +178,23 @@ export function EmployeeTable({
             Cari
           </Button>
         </div>
-        <PermissionGate permissions={['hr:employee:create']}>
-          <Button onClick={() => router.push('/hr/employees/create')}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Tambah Karyawan
-          </Button>
-        </PermissionGate>
+        <div className="flex gap-2">
+          <PermissionGate permissions={['hr:employee:create']}>
+            <Button
+              variant="outline"
+              onClick={() => router.push('/hr/employees/import')}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Import Excel
+            </Button>
+          </PermissionGate>
+          <PermissionGate permissions={['hr:employee:create']}>
+            <Button onClick={() => router.push('/hr/employees/create')}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Tambah Karyawan
+            </Button>
+          </PermissionGate>
+        </div>
       </div>
 
       {/* Filters Row */}

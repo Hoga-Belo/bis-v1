@@ -1,5 +1,6 @@
 export { EmployeeTable } from './employee-table';
 export { EmployeeForm } from './employee-form';
+export { ExcelImport } from './excel-import';
 
 // Dashboard components
 export { EmployeeStats } from './employee-stats';

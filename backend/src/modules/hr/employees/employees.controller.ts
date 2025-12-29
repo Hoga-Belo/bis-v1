@@ -13,6 +13,7 @@ import {
   UploadedFile,
   ParseIntPipe,
   DefaultValuePipe,
+  Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -25,9 +26,14 @@ import {
   ApiBody,
   ApiQuery,
 } from '@nestjs/swagger';
+import { Response } from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
 import { RequirePermissions, CurrentUser } from '../../../common/decorators';
 import { AuthenticatedUser } from '../../auth/auth.service';
 import { EmployeesService } from './employees.service';
+import { ExcelTemplateService } from './excel-template.service';
+import { ExcelImportService } from './excel-import.service';
 import {
   CreateEmployeeDto,
   UpdateEmployeeDto,
@@ -35,14 +41,18 @@ import {
   CreateEmployeeFamilyDto,
   CreateEmployeeEducationDto,
 } from './dto';
-import { photoUploadConfig, documentUploadConfig } from '../../../config/upload.config';
+import { photoUploadConfig, documentUploadConfig, excelUploadConfig } from '../../../config/upload.config';
 import { DocumentType } from '../../../entities/hr/employee-document.entity';
 
 @ApiTags('HR - Employees')
 @ApiBearerAuth()
 @Controller('hr/employees')
 export class EmployeesController {
-  constructor(private readonly employeesService: EmployeesService) {}
+  constructor(
+    private readonly employeesService: EmployeesService,
+    private readonly excelTemplateService: ExcelTemplateService,
+    private readonly excelImportService: ExcelImportService,
+  ) {}
 
   // ==================== Employee CRUD ====================
 
@@ -111,6 +121,132 @@ export class EmployeesController {
     return this.employeesService.getContractExpiringEmployees(days);
   }
 
+  // ==================== Excel Import ====================
+
+  @Get('import/template')
+  @RequirePermissions('hr:employee:create')
+  @ApiOperation({ summary: 'Download Excel import template' })
+  @ApiResponse({
+    status: 200,
+    description: 'Excel template file',
+    content: {
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
+        schema: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Missing required permissions',
+  })
+  async downloadTemplate(@Res() res: Response) {
+    const buffer = await this.excelTemplateService.generateTemplate();
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=template_import_karyawan.xlsx',
+    );
+    res.send(buffer);
+  }
+
+  @Post('import')
+  @RequirePermissions('hr:employee:create')
+  @UseInterceptors(FileInterceptor('file', excelUploadConfig))
+  @ApiOperation({ summary: 'Import employees from Excel file' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Excel file (.xlsx, max 20MB)',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Import completed',
+    schema: {
+      type: 'object',
+      properties: {
+        totalRows: { type: 'number', description: 'Total rows processed' },
+        successCount: { type: 'number', description: 'Successfully imported' },
+        errorCount: { type: 'number', description: 'Failed rows' },
+        errors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              rowNumber: { type: 'number' },
+              nik: { type: 'string' },
+              field: { type: 'string' },
+              message: { type: 'string' },
+              originalValue: { type: 'string' },
+            },
+          },
+        },
+        errorReportPath: { type: 'string', description: 'Error report filename' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - Invalid file or data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Missing required permissions',
+  })
+  async importFromExcel(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.excelImportService.importFromExcel(file, user.id);
+  }
+
+  @Get('import/errors/:filename')
+  @RequirePermissions('hr:employee:create')
+  @ApiOperation({ summary: 'Download error report from import' })
+  @ApiParam({ name: 'filename', description: 'Error report filename' })
+  @ApiResponse({
+    status: 200,
+    description: 'Error report Excel file',
+    content: {
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
+        schema: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Missing required permissions',
+  })
+  @ApiResponse({ status: 404, description: 'Error report not found' })
+  async downloadErrorReport(
+    @Param('filename') filename: string,
+    @Res() res: Response,
+  ) {
+    const filePath = path.join('./uploads/temp', filename);
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ message: 'Error report not found' });
+      return;
+    }
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+  }
+
   @Get(':id')
   @RequirePermissions('hr:employee:read')
   @ApiOperation({ summary: 'Get a single employee by ID' })
@@ -147,7 +283,7 @@ export class EmployeesController {
     @Body() dto: CreateEmployeeDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.employeesService.create(dto, user.id);
+    return this.employeesService.create(dto, user.id, user.permissions || []);
   }
 
   @Patch(':id')
@@ -171,7 +307,7 @@ export class EmployeesController {
     @Body() dto: UpdateEmployeeDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.employeesService.update(id, dto, user.id);
+    return this.employeesService.update(id, dto, user.id, user.permissions || []);
   }
 
   @Delete(':id')

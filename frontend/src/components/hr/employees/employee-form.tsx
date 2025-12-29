@@ -110,7 +110,12 @@ export function EmployeeForm({ initialData, onSubmit, onCancel }: EmployeeFormPr
   const [cities, setCities] = useState<City[]>([]);
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
 
+  // Check if user can view payroll section (either create or update permission)
   const canViewPayroll = can('hr:employee:create:payroll') || can('hr:employee:update:payroll');
+  // Check if user can write payroll data based on mode
+  const canWritePayroll = isEditing
+    ? can('hr:employee:update:payroll')
+    : can('hr:employee:create:payroll');
 
   const form = useForm<EmployeeFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -268,14 +273,18 @@ export function EmployeeForm({ initialData, onSubmit, onCancel }: EmployeeFormPr
         permanentDate: data.permanentDate || undefined,
         contractStartDate: data.contractStartDate || undefined,
         contractEndDate: data.contractEndDate || undefined,
-        basicSalary: data.basicSalary,
-        bankName: data.bankName || undefined,
-        bankAccountNumber: data.bankAccountNumber || undefined,
-        bankAccountHolder: data.bankAccountHolder || undefined,
-        taxNumber: data.taxNumber || undefined,
-        bpjsKesehatan: data.bpjsKesehatan || undefined,
-        bpjsKetenagakerjaan: data.bpjsKetenagakerjaan || undefined,
       };
+
+      // Only include payroll fields if user has write permission
+      if (canWritePayroll) {
+        submitData.basicSalary = data.basicSalary;
+        submitData.bankName = data.bankName || undefined;
+        submitData.bankAccountNumber = data.bankAccountNumber || undefined;
+        submitData.bankAccountHolder = data.bankAccountHolder || undefined;
+        submitData.taxNumber = data.taxNumber || undefined;
+        submitData.bpjsKesehatan = data.bpjsKesehatan || undefined;
+        submitData.bpjsKetenagakerjaan = data.bpjsKetenagakerjaan || undefined;
+      }
 
       await onSubmit(submitData);
     } catch {
@@ -361,7 +370,7 @@ export function EmployeeForm({ initialData, onSubmit, onCancel }: EmployeeFormPr
               <CardTitle>Informasi Penggajian</CardTitle>
             </CardHeader>
             <CardContent>
-              <PayrollSection form={form} />
+              <PayrollSection form={form} isEditMode={isEditing} />
             </CardContent>
           </Card>
         )}

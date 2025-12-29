@@ -193,23 +193,62 @@ Bebang BIS addresses the operational challenges of PT Prima Sarana Gemilang (Sit
 - **Total Employees**: Count of all employees (including inactive)
 - **Active Employees**: Count of employees with active status
 - **Contract Expiring**: Count of employees with contracts expiring in 30 days
-- Statistics displayed on main dashboard with visual cards
+- Statistics displayed on HR dashboard with visual cards
 - Quick navigation to employee list from statistics
 
-#### Contract Expiry Tracking
-- Automatic detection of contracts expiring within 30 days
-- Alert component on dashboard showing expiring contracts
-- Employee list with contract end dates
-- Quick access to employee details for contract renewal
+#### Contract Expiry Tracking & Notification System
+- **Tiered Alert System**:
+  - **H-30 (≤30 days)**: Red/destructive variant - urgent action required
+  - **H-60 (31-60 days)**: Yellow/warning variant - advance notice
+- **Configurable Days Parameter**: API supports custom days parameter (default: 30)
+- **Alert Component Features**:
+  - Employee list with name, NIK, and days remaining
+  - Visual urgency indicators (color-coded)
+  - Quick navigation to employee details for contract renewal
+  - Grouped display by urgency level
+- **Dashboard Integration**: Alerts displayed prominently on HR dashboard
+
+#### HR Dashboard (Landing Page)
+- **Employee Statistics Section**:
+  - Total employees count
+  - Active employees count
+  - Contract expiring count (30 days)
+  - Visual cards with icons
+- **Contract Expiry Alerts**:
+  - H-30 urgent alerts (red)
+  - H-60 warning alerts (yellow)
+  - Employee list with days remaining
+- **Quick Actions**:
+  - Add Employee button
+  - Organization Structure link
+- **HR Modules Navigation Grid**:
+  - Divisions, Departments, Positions
+  - Job Grades, Employment Statuses, Work Locations
+  - Organization Structure, Employees
+  - Icons and descriptions for each module
+- **Permission Gates**: All sections protected by appropriate permissions
+- **Loading States**: Skeleton loaders during data fetch
+- **Error Handling**: Graceful error display with retry options
 
 #### Field-Level Permissions for Payroll
-- Payroll data protected with separate permissions:
+- **Read Permissions**:
   - `hr:employee:read:payroll` - View payroll information
-  - `hr:employee:create:payroll` - Create payroll data
-  - `hr:employee:update:payroll` - Update payroll data
-- Payroll tab only visible to users with read permission
-- Payroll form section only editable with create/update permission
-- Sensitive financial data protected from unauthorized access
+  - Payroll tab only visible to users with read permission
+- **Write Permissions**:
+  - `hr:employee:create:payroll` - Create payroll data for new employees
+  - `hr:employee:update:payroll` - Update payroll data for existing employees
+- **Backend Validation**:
+  - `validatePayrollPermission()` method checks user permissions
+  - Strips payroll fields from request if user lacks permission
+  - Prevents unauthorized payroll data modification
+- **Frontend Protection**:
+  - `PayrollSection` component hides form inputs without permission
+  - Form submission excludes payroll fields when user lacks write permission
+  - Uses `usePermissions` hook for real-time permission checking
+- **Sensitive Data Protection**:
+  - Bank account information protected
+  - NPWP (tax ID) protected
+  - BPJS numbers protected
 
 #### Employee Detail View (6 Tabs)
 1. **Personal Info Tab**: Personal details, contact information, address
@@ -218,6 +257,39 @@ Bebang BIS addresses the operational challenges of PT Prima Sarana Gemilang (Sit
 4. **Education Tab**: Education history with inline add/edit/delete
 5. **Documents Tab**: Document upload and management
 6. **Payroll Tab**: Bank and tax information (permission-protected)
+
+#### Excel Bulk Import
+- **Template Download**: 4-sheet Excel template with data validation
+  - **READ_ME**: Instructions and master data reference codes
+  - **KARYAWAN_HEAD**: Employee data with dropdown validation for Gender, Religion, Blood Type, Marital Status, Department, Position, Job Grade, Employment Status, Work Location
+  - **KELUARGA_DETAIL**: Family member data with Relationship Type dropdown (linked by NIK to new or existing employees)
+  - **PENDIDIKAN_DETAIL**: Education history data with Education Level dropdown (linked by NIK to new or existing employees)
+- **Data Validation Dropdowns**: Pre-populated from master data for data integrity
+  - Gender (L/Laki-laki, P/Perempuan - accepts multiple formats)
+  - Religion (Islam, Kristen, Katolik, Hindu, Buddha, Konghucu)
+  - Blood Type (A, B, AB, O)
+  - Marital Status (Belum Menikah, Menikah, Cerai Hidup, Cerai Mati)
+  - Relationship Type (Ayah, Ibu, Suami, Istri, Anak, Saudara, etc.)
+  - Education Level (SD, SMP, SMA, D1, D2, D3, D4, S1, S2, S3)
+  - Department, Position, Job Grade, Employment Status, Work Location (from database)
+- **Import Process**:
+  - Drag & drop file upload with visual feedback
+  - File validation (only .xlsx, max 20MB)
+  - Upload progress bar with percentage
+  - Row-by-row validation against master data
+  - NIK uniqueness check (database and within batch)
+  - Family/education records can be attached to both newly imported AND existing employees
+  - TypeORM transaction for atomic inserts (all-or-nothing per valid row)
+  - Skip-error strategy (valid rows inserted, invalid rows skipped)
+  - Separate success counts for employees, family records, and education records
+- **Error Handling**:
+  - Detailed error messages per row (row number, NIK, field, message, original value)
+  - Unknown employee NIK in family/education sheets reported with clear error message
+  - Error table with pagination in UI
+  - Error report Excel generation for download
+  - Clear success/error count summary
+- **Audit Trail**: All imported employees logged with CREATE action
+- **Permission Required**: `hr:employee:create` for template download and import
 
 ### User Management
 - Create, read, update, delete users

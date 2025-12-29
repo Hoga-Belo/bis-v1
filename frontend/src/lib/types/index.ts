@@ -4,3 +4,5 @@ export * from './user';
 export * from './role';
 export * from './audit';
 export * from './hr';
+export * from './attendance';
+export * from './leave';

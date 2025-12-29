@@ -53,9 +53,13 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/modules/hr/employees/employees.controller.ts` | Employee endpoints with Swagger docs (18+ endpoints) |
 | `src/modules/hr/employees/employees.service.ts` | Employee business logic (CRUD, files, stats) |
 | `src/modules/hr/employees/dto/` | CreateEmployee, UpdateEmployee, EmployeeQuery, CreateEmployeeFamily, CreateEmployeeEducation DTOs |
-| `src/config/upload.config.ts` | Multer configurations for photos (5MB) and documents (10MB) |
+| `src/modules/hr/employees/dto/import-employee.dto.ts` | Import DTOs (ImportEmployeeRowDto, ImportFamilyRowDto, ImportEducationRowDto, ImportResultDto) |
+| `src/modules/hr/employees/excel-template.service.ts` | Excel template generation with 4 sheets and data validation |
+| `src/modules/hr/employees/excel-import.service.ts` | Excel import with validation, transaction, and error report generation |
+| `src/config/upload.config.ts` | Multer configurations for photos (5MB), documents (10MB), and Excel (20MB) |
 | `uploads/photos/` | Employee photo storage directory |
 | `uploads/documents/` | Employee document storage directory |
+| `uploads/temp/` | Temporary Excel file storage for import processing |
 | `src/modules/auth/` | Authentication (login, JWT strategy, guards, refresh token) |
 | `src/modules/auth/strategies/` | JWT strategy for Passport.js |
 | `src/modules/auth/guards/` | JwtAuthGuard for route protection |
@@ -105,7 +109,7 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/app/(dashboard)/audit/` | Audit trail page with filtering and pagination |
 | `src/app/(dashboard)/hr/` | HR module pages |
 | `src/app/(dashboard)/hr/layout.tsx` | HR layout with sidebar navigation |
-| `src/app/(dashboard)/hr/page.tsx` | HR index (redirect to divisions) |
+| `src/app/(dashboard)/hr/page.tsx` | HR Dashboard with stats, alerts, quick actions, module navigation |
 | `src/app/(dashboard)/hr/divisions/` | Division pages (list, create, edit) |
 | `src/app/(dashboard)/hr/departments/` | Department pages (list, create, edit) |
 | `src/app/(dashboard)/hr/positions/` | Position pages (list, create, edit) |
@@ -113,13 +117,16 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/app/(dashboard)/hr/employment-statuses/` | Employment Status pages (list, create, edit) |
 | `src/app/(dashboard)/hr/work-locations/` | Work Location pages (list, create, edit) |
 | `src/app/(dashboard)/hr/organization/` | Organization structure page |
-| `src/app/(dashboard)/hr/employees/` | Employee pages (list, detail, create, edit) |
+| `src/app/(dashboard)/hr/employees/` | Employee pages (list, detail, create, edit, import) |
 | `src/app/(dashboard)/hr/employees/page.tsx` | Employee list page with search, filter, pagination |
 | `src/app/(dashboard)/hr/employees/[id]/page.tsx` | Employee detail page with 6 tabs |
 | `src/app/(dashboard)/hr/employees/create/page.tsx` | Employee create page with multi-section form |
 | `src/app/(dashboard)/hr/employees/[id]/edit/page.tsx` | Employee edit page with pre-populated data |
+| `src/app/(dashboard)/hr/employees/import/page.tsx` | Excel import page with drag & drop upload |
 | `src/components/` | React components |
 | `src/components/ui/` | Shadcn UI components |
+| `src/components/ui/progress.tsx` | Progress bar component for upload tracking |
+| `src/components/ui/alert.tsx` | Alert component with variants (default, destructive, warning) |
 | `src/components/forms/` | Form components (LoginForm, ChangePasswordForm) |
 | `src/components/layouts/` | Layout components (DashboardLayout) |
 | `src/components/shared/` | Shared/common components (LoadingSpinner) |
@@ -135,7 +142,8 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/components/hr/employment-statuses/` | Employment Status components (EmploymentStatusTable, EmploymentStatusForm) |
 | `src/components/hr/work-locations/` | Work Location components (WorkLocationTable, WorkLocationForm) |
 | `src/components/hr/organization/` | Organization components (OrganizationTree, DepartmentHierarchy) |
-| `src/components/hr/employees/` | Employee components (EmployeeTable, EmployeeForm, PhotoUpload, etc.) |
+| `src/components/hr/employees/` | Employee components (EmployeeTable, EmployeeForm, PhotoUpload, ExcelImport, etc.) |
+| `src/components/hr/employees/excel-import.tsx` | Excel import component with drag & drop, progress, and error display |
 | `src/components/hr/employees/tabs/` | Employee detail tabs (PersonalInfoTab, EmploymentTab, FamilyTab, EducationTab, DocumentsTab, PayrollTab) |
 | `src/components/hr/employees/form-sections/` | Employee form sections (PersonalInfoSection, AddressSection, EmploymentSection, PayrollSection) |
 | `src/components/dashboard/` | Dashboard components (StatsCard) |
@@ -491,7 +499,7 @@ Examples:
 | `/hr/employees` | GET | `hr:employee:read` | List employees with pagination, search, filter |
 | `/hr/employees` | POST | `hr:employee:create` | Create employee |
 | `/hr/employees/statistics` | GET | `hr:employee:read` | Get employee statistics (total, active, contract expiring) |
-| `/hr/employees/contract-expiring` | GET | `hr:employee:read` | Get employees with contracts expiring in 30 days |
+| `/hr/employees/contracts/expiring` | GET | `hr:employee:read` | Get employees with contracts expiring (configurable days param, default 30) |
 | `/hr/employees/:id` | GET | `hr:employee:read` | Get employee by ID with all relations |
 | `/hr/employees/:id` | PATCH | `hr:employee:update` | Update employee |
 | `/hr/employees/:id` | DELETE | `hr:employee:delete` | Soft delete employee |
@@ -507,6 +515,131 @@ Examples:
 | `/hr/employees/:id/education` | POST | `hr:employee:update` | Add employee education record |
 | `/hr/employees/:id/education/:eduId` | PATCH | `hr:employee:update` | Update employee education record |
 | `/hr/employees/:id/education/:eduId` | DELETE | `hr:employee:update` | Delete employee education record |
+
+### Excel Import API Endpoints
+
+| Endpoint | Method | Permission | Description |
+|----------|--------|------------|-------------|
+| `/hr/employees/import/template` | GET | `hr:employee:create` | Download Excel import template (4 sheets) |
+| `/hr/employees/import` | POST | `hr:employee:create` | Import employees from Excel file |
+| `/hr/employees/import/errors/:filename` | GET | `hr:employee:create` | Download error report Excel file |
+
+### Excel Import Flow
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Download  │────▶│   Fill      │────▶│   Upload    │
+│   Template  │     │   Data      │     │   Excel     │
+└─────────────┘     └─────────────┘     └─────────────┘
+                                              │
+                    ┌─────────────────────────┘
+                    ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Parse     │────▶│   Validate  │────▶│   Insert    │
+│   Excel     │     │   Rows      │     │   Database  │
+└─────────────┘     └─────────────┘     └─────────────┘
+                          │                    │
+                          ▼                    ▼
+                    ┌─────────────┐     ┌─────────────┐
+                    │   Collect   │     │   Audit     │
+                    │   Errors    │     │   Trail     │
+                    └─────────────┘     └─────────────┘
+                          │
+                          ▼
+                    ┌─────────────┐
+                    │   Generate  │
+                    │   Error     │
+                    │   Report    │
+                    └─────────────┘
+```
+
+**Excel Import Process:**
+1. User downloads Excel template with 4 sheets (READ_ME, KARYAWAN_HEAD, KELUARGA_DETAIL, PENDIDIKAN_DETAIL)
+2. User fills in employee data in KARYAWAN_HEAD sheet with dropdown validation
+3. User fills in family data in KELUARGA_DETAIL sheet (optional, linked by NIK)
+4. User fills in education data in PENDIDIKAN_DETAIL sheet (optional, linked by NIK)
+5. User uploads filled Excel file via drag & drop interface
+6. Backend parses Excel using exceljs library
+7. Each row is validated against master data (department, position, religion, etc.)
+8. NIK uniqueness is checked against database and within batch
+9. Family/education records can be attached to both newly imported AND existing employees
+10. Valid rows are inserted using TypeORM transaction (atomic operation)
+11. Errors are collected with row number, NIK, field, message, and original value
+12. If errors exist, error report Excel is generated for download
+13. All imported employees are logged in audit trail with CREATE action
+
+**Template Sheet Structure:**
+- **READ_ME**: Instructions and master data reference codes
+- **KARYAWAN_HEAD**: Employee data with dropdown validation for Gender, Religion, Blood Type, Marital Status, Department, Position, Job Grade, Employment Status, Work Location
+- **KELUARGA_DETAIL**: Family member data with Relationship Type dropdown (linked by NIK to new or existing employees)
+- **PENDIDIKAN_DETAIL**: Education history with Education Level dropdown (linked by NIK to new or existing employees)
+
+**Excel Import Service Internal Interfaces:**
+```typescript
+// ParsedFamily interface with rowNumber for error tracking
+interface ParsedFamily {
+  employeeNik: string;
+  rowNumber: number;  // Added for error reporting
+  name: string;
+  relationshipTypeId: string;
+  birthDate?: Date;
+  phone?: string;
+  address?: string;
+  isEmergencyContact: boolean;
+}
+
+// ParsedEducation interface with rowNumber for error tracking
+interface ParsedEducation {
+  employeeNik: string;
+  rowNumber: number;  // Added for error reporting
+  educationLevelId: string;
+  institutionName: string;
+  major?: string;
+  graduationYear?: number;
+  gpa?: number;
+}
+```
+
+**Insertion Logic for Family/Education Records:**
+```typescript
+// During insertion, lookup existing employees if not in new employee map
+for (const family of parsedData.families) {
+  let employeeId = employeeNikToIdMap.get(family.employeeNik);
+  
+  // If not found in new employees, lookup existing employee in database
+  if (!employeeId) {
+    const existingEmployee = await queryRunner.manager.findOne(Employee, {
+      where: { nik: family.employeeNik, deletedAt: IsNull() },
+    });
+    if (existingEmployee) {
+      employeeId = existingEmployee.id;
+    }
+  }
+  
+  if (employeeId) {
+    // Insert family record
+    familySuccessCount++;
+  }
+}
+```
+
+**Success Count Tracking:**
+- `employeeSuccessCount`: Number of new employees successfully imported
+- `familySuccessCount`: Number of family records successfully attached
+- `educationSuccessCount`: Number of education records successfully attached
+
+**Gender Code Mapping:**
+```typescript
+// Accepts multiple formats for gender
+const genderMap = {
+  'L': Gender.MALE,
+  'LAKI-LAKI': Gender.MALE,
+  'MALE': Gender.MALE,
+  'P': Gender.FEMALE,
+  'PEREMPUAN': Gender.FEMALE,
+  'FEMALE': Gender.FEMALE,
+};
+```
 
 ### File Upload Configuration
 
@@ -550,11 +683,30 @@ export const documentUploadConfig = {
     cb(null, true);
   },
 };
+
+// Excel upload configuration
+export const excelUploadConfig = {
+  storage: diskStorage({
+    destination: './uploads/temp',
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, `import-${uniqueSuffix}${extname(file.originalname)}`);
+    },
+  }),
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+  fileFilter: (req, file, cb) => {
+    if (!file.originalname.match(/\.(xlsx|xls)$/)) {
+      cb(new BadRequestException('Only Excel files are allowed'), false);
+    }
+    cb(null, true);
+  },
+};
 ```
 
 **File Storage Directories:**
 - `backend/uploads/photos/` - Employee photos (max 5MB, images only)
 - `backend/uploads/documents/` - Employee documents (max 10MB, PDF/Word/images)
+- `backend/uploads/temp/` - Temporary Excel files for import (max 20MB, .xlsx/.xls only, cleaned up after processing)
 
 ### Organization Service Methods
 
@@ -634,14 +786,17 @@ backend/src/modules/hr/
 │   └── organization.service.ts
 └── employees/                      # Employee management
     ├── employees.module.ts         # Module with Multer config
-    ├── employees.controller.ts     # 18+ endpoints with Swagger docs
+    ├── employees.controller.ts     # 21+ endpoints with Swagger docs (includes import)
     ├── employees.service.ts        # CRUD, file uploads, statistics
+    ├── excel-template.service.ts   # Excel template generation with 4 sheets
+    ├── excel-import.service.ts     # Excel import with validation and transaction
     └── dto/
         ├── create-employee.dto.ts
         ├── update-employee.dto.ts
         ├── employee-query.dto.ts
         ├── create-employee-family.dto.ts
         ├── create-employee-education.dto.ts
+        ├── import-employee.dto.ts  # Import DTOs (row, error, result)
         └── index.ts
 ```
 
@@ -649,7 +804,7 @@ backend/src/modules/hr/
 ```
 frontend/src/app/(dashboard)/hr/
 ├── layout.tsx                      # HR layout with sidebar
-├── page.tsx                        # HR index (redirect)
+├── page.tsx                        # HR Dashboard (stats, alerts, quick actions, module grid)
 ├── divisions/                      # Division pages
 │   ├── page.tsx                    # List
 │   ├── create/page.tsx             # Create
@@ -677,8 +832,9 @@ frontend/src/app/(dashboard)/hr/
 ├── organization/                   # Organization chart
 │   └── page.tsx
 └── employees/                      # Employee pages
-    ├── page.tsx                    # List with search, filter, pagination
+    ├── page.tsx                    # List with search, filter, pagination, import button
     ├── create/page.tsx             # Multi-section create form
+    ├── import/page.tsx             # Excel import page with drag & drop
     └── [id]/
         ├── page.tsx                # Detail with 6 tabs
         └── edit/page.tsx           # Edit with pre-populated data
@@ -715,13 +871,14 @@ frontend/src/components/hr/
 │   └── department-hierarchy.tsx
 └── employees/
     ├── index.ts                    # Main exports
-    ├── employee-table.tsx          # Data table with actions
+    ├── employee-table.tsx          # Data table with actions and import button
     ├── employee-form.tsx           # Multi-section form
     ├── photo-upload.tsx            # Photo upload with preview
     ├── document-upload.tsx         # Document upload with drag-and-drop
     ├── document-list.tsx           # Document list with download/delete
     ├── employee-stats.tsx          # Statistics cards
     ├── contract-expiry-alert.tsx   # Contract expiry notifications
+    ├── excel-import.tsx            # Excel import with drag & drop, progress, error display
     ├── tabs/
     │   ├── index.ts
     │   ├── personal-info-tab.tsx   # Personal information display
@@ -736,6 +893,216 @@ frontend/src/components/hr/
         ├── address-section.tsx
         ├── employment-section.tsx
         └── payroll-section.tsx     # Permission-protected section
+```
+
+### HR Dashboard Page Structure
+
+The HR landing page (`frontend/src/app/(dashboard)/hr/page.tsx`) serves as a comprehensive dashboard:
+
+```typescript
+// HR Dashboard Structure
+<div className="space-y-6">
+  {/* Employee Statistics Section */}
+  <PermissionGate permission="hr:employee:read">
+    <EmployeeStats />  {/* Total, Active, Contract Expiring counts */}
+  </PermissionGate>
+
+  {/* Contract Expiry Alerts - Tiered System */}
+  <PermissionGate permission="hr:employee:read">
+    <ContractExpiryAlert
+      employees={expiringH30}  // ≤30 days - red/urgent
+      variant="destructive"
+      title="Kontrak Segera Berakhir (H-30)"
+    />
+    <ContractExpiryAlert
+      employees={expiringH60}  // 31-60 days - yellow/warning
+      variant="warning"
+      title="Kontrak Akan Berakhir (H-60)"
+    />
+  </PermissionGate>
+
+  {/* Quick Actions */}
+  <div className="flex gap-4">
+    <PermissionGate permission="hr:employee:create">
+      <Button asChild><Link href="/hr/employees/create">Tambah Karyawan</Link></Button>
+    </PermissionGate>
+    <PermissionGate permission="hr:organization:read">
+      <Button variant="outline" asChild><Link href="/hr/organization">Struktur Organisasi</Link></Button>
+    </PermissionGate>
+  </div>
+
+  {/* HR Modules Navigation Grid */}
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    {/* Division, Department, Position, Job Grade, Employment Status, Work Location, Organization, Employees */}
+    {modules.map(module => (
+      <PermissionGate key={module.href} permission={module.permission}>
+        <Card><Link href={module.href}>{module.title}</Link></Card>
+      </PermissionGate>
+    ))}
+  </div>
+</div>
+```
+
+**Key Features:**
+- **Employee Statistics**: Uses `EmployeeStats` component with `employeesApi.getStatistics()`
+- **Tiered Contract Alerts**: H-30 (red/urgent) and H-60 (yellow/warning) using `employeesApi.getExpiringContracts(days)`
+- **Quick Actions**: Add Employee and Organization Structure buttons
+- **Module Navigation**: Grid of HR sub-modules with permission gates
+- **Loading States**: Skeleton loaders during data fetch
+- **Error Handling**: Graceful error display with retry options
+
+### Contract Expiry API
+
+The contract expiry endpoint supports a configurable days parameter:
+
+```typescript
+// Backend: employees.controller.ts
+@Get('contracts/expiring')
+@RequirePermissions('hr:employee:read')
+async getContractExpiringEmployees(
+  @Query('days') days: number = 30,
+): Promise<Employee[]> {
+  return this.employeesService.getContractExpiringEmployees(days);
+}
+
+// Backend: employees.service.ts
+async getContractExpiringEmployees(days: number = 30): Promise<Employee[]> {
+  const today = new Date();
+  const futureDate = new Date();
+  futureDate.setDate(today.getDate() + days);
+
+  return this.employeeRepository.find({
+    where: {
+      contractEndDate: Between(today, futureDate),
+      deletedAt: IsNull(),
+    },
+    relations: ['department', 'position'],
+    order: { contractEndDate: 'ASC' },
+  });
+}
+
+// Frontend: hr.ts API endpoint
+getExpiringContracts: async (days: number = 30): Promise<Employee[]> => {
+  const response = await client.get(`/hr/employees/contracts/expiring?days=${days}`);
+  return response.data;
+}
+```
+
+**Usage in HR Dashboard:**
+```typescript
+// Fetch H-30 (urgent) and H-60 (warning) separately
+const [h30Employees, h60Employees] = await Promise.all([
+  employeesApi.getExpiringContracts(30),
+  employeesApi.getExpiringContracts(60),
+]);
+
+// Filter H-60 to exclude H-30 (already shown as urgent)
+const h60Only = h60Employees.filter(emp => {
+  const daysRemaining = calculateDaysRemaining(emp.contractEndDate);
+  return daysRemaining > 30 && daysRemaining <= 60;
+});
+```
+
+### Payroll Permission Validation Flow
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Request   │────▶│  Extract    │────▶│  Check      │
+│   Arrives   │     │  User       │     │  Permission │
+└─────────────┘     └─────────────┘     └─────────────┘
+                                              │
+                    ┌─────────────────────────┘
+                    ▼
+              ┌─────────────┐
+              │  Has Payroll│
+              │  Permission?│
+              └─────────────┘
+                    │
+         ┌──────────┴──────────┐
+         ▼                     ▼
+   ┌───────────┐         ┌───────────┐
+   │   YES     │         │    NO     │
+   │  Include  │         │   Strip   │
+   │  Payroll  │         │  Payroll  │
+   │  Fields   │         │  Fields   │
+   └───────────┘         └───────────┘
+```
+
+**Backend Implementation:**
+```typescript
+// employees.service.ts
+private async validatePayrollPermission(
+  userId: string,
+  isCreate: boolean,
+  dto: CreateEmployeeDto | UpdateEmployeeDto,
+): Promise<CreateEmployeeDto | UpdateEmployeeDto> {
+  const permission = isCreate
+    ? 'hr:employee:create:payroll'
+    : 'hr:employee:update:payroll';
+  
+  const hasPermission = await this.checkUserPermission(userId, permission);
+  
+  if (!hasPermission) {
+    // Strip payroll fields from DTO
+    const { bankName, bankAccountNumber, bankAccountHolderName,
+            npwp, bpjsKesehatan, bpjsKetenagakerjaan, ...rest } = dto;
+    return rest;
+  }
+  
+  return dto;
+}
+
+// Usage in create/update methods
+async create(userId: string, dto: CreateEmployeeDto): Promise<Employee> {
+  const sanitizedDto = await this.validatePayrollPermission(userId, true, dto);
+  // ... create employee with sanitizedDto
+}
+
+async update(userId: string, id: string, dto: UpdateEmployeeDto): Promise<Employee> {
+  const sanitizedDto = await this.validatePayrollPermission(userId, false, dto);
+  // ... update employee with sanitizedDto
+}
+```
+
+**Frontend Implementation:**
+```typescript
+// payroll-section.tsx
+export function PayrollSection({ form, isEditing }: PayrollSectionProps) {
+  const { hasPermission } = usePermissions();
+  
+  const canWritePayroll = isEditing
+    ? hasPermission('hr:employee:update:payroll')
+    : hasPermission('hr:employee:create:payroll');
+  
+  if (!canWritePayroll) {
+    return (
+      <Alert variant="info">
+        <AlertDescription>
+          Anda tidak memiliki izin untuk mengedit data payroll.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  
+  return (
+    <div className="space-y-4">
+      {/* Bank Name, Account Number, Account Holder, NPWP, BPJS fields */}
+    </div>
+  );
+}
+
+// employee-form.tsx - Form submission
+const onSubmit = async (data: EmployeeFormData) => {
+  // Exclude payroll fields if user lacks permission
+  if (!hasPermission(isEditing ? 'hr:employee:update:payroll' : 'hr:employee:create:payroll')) {
+    const { bankName, bankAccountNumber, bankAccountHolderName,
+            npwp, bpjsKesehatan, bpjsKetenagakerjaan, ...rest } = data;
+    data = rest;
+  }
+  
+  // Submit sanitized data
+  await employeesApi.create(data);
+};
 ```
 
 ### Dashboard Integration

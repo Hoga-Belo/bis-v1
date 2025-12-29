@@ -1,4 +1,5 @@
 import { apiClient } from '../client';
+import axios from 'axios';
 import type { ApiResponse } from '@/lib/types/api';
 import type {
   Division,
@@ -38,6 +39,7 @@ import type {
   DocumentType,
   EmployeeStatistics,
   ContractExpiringEmployee,
+  ImportResult,
 } from '@/lib/types/hr';
 
 // Paginated response type for HR entities
@@ -417,6 +419,54 @@ export const employeesApi = {
   // Statistics for dashboard
   getStatistics: async (): Promise<ApiResponse<EmployeeStatistics>> => {
     return apiClient.get('/hr/employees/statistics');
+  },
+
+  // Excel Import
+  downloadTemplate: async (): Promise<Blob> => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    
+    const response = await axios.get(`${baseUrl}/hr/employees/import/template`, {
+      responseType: 'blob',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    return response.data;
+  },
+
+  importFromExcel: async (
+    file: File,
+    onProgress?: (progress: number) => void
+  ): Promise<ImportResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+    const response = await axios.post(`${baseUrl}/hr/employees/import`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+        }
+      },
+    });
+    // Extract data from ApiResponse wrapper
+    return response.data?.data ?? response.data;
+  },
+
+  downloadErrorReport: async (filename: string): Promise<Blob> => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+    const response = await axios.get(`${baseUrl}/hr/employees/import/errors/${filename}`, {
+      responseType: 'blob',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    return response.data;
   },
 };
 

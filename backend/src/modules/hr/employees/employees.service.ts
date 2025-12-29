@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, Between, MoreThanOrEqual, LessThanOrEqual, And } from 'typeorm';
@@ -29,6 +30,17 @@ import {
 } from './dto';
 import { EmployeeStatus as DtoEmployeeStatus } from './dto/update-employee.dto';
 
+// Payroll fields that require special permissions
+const PAYROLL_FIELDS = [
+  'basicSalary',
+  'bankName',
+  'bankAccountNumber',
+  'bankAccountHolder',
+  'taxNumber',
+  'bpjsKesehatan',
+  'bpjsKetenagakerjaan',
+] as const;
+
 @Injectable()
 export class EmployeesService {
   constructor(
@@ -41,6 +53,29 @@ export class EmployeesService {
     @InjectRepository(EmployeeDocument)
     private readonly documentRepository: Repository<EmployeeDocument>,
   ) {}
+
+  /**
+   * Validates that the user has permission to write payroll fields.
+   * Throws ForbiddenException if payroll fields are provided without permission.
+   */
+  private validatePayrollPermission(
+    dto: Record<string, unknown>,
+    userPermissions: string[],
+    requiredPermission: string,
+  ): void {
+    const providedPayrollFields = PAYROLL_FIELDS.filter(
+      (field) => dto[field] !== undefined,
+    );
+
+    if (providedPayrollFields.length > 0) {
+      const hasPayrollWrite = userPermissions.includes(requiredPermission);
+      if (!hasPayrollWrite) {
+        throw new ForbiddenException(
+          `Payroll fields require ${requiredPermission} permission. Attempted fields: ${providedPayrollFields.join(', ')}`,
+        );
+      }
+    }
+  }
 
   private mapGenderToEntity(gender: DtoGender): EntityGender {
     return gender === DtoGender.L ? EntityGender.MALE : EntityGender.FEMALE;
@@ -271,7 +306,14 @@ export class EmployeesService {
     return response;
   }
 
-  async create(dto: CreateEmployeeDto, createdBy?: string) {
+  async create(dto: CreateEmployeeDto, createdBy?: string, userPermissions: string[] = []) {
+    // Validate payroll permission before processing
+    this.validatePayrollPermission(
+      dto as unknown as Record<string, unknown>,
+      userPermissions,
+      'hr:employee:create:payroll',
+    );
+
     const existingByNik = await this.employeeRepository.findOne({
       where: { nik: dto.nik, deletedAt: IsNull() },
     });
@@ -331,7 +373,14 @@ export class EmployeesService {
     return this.findOne(savedEmployee.id);
   }
 
-  async update(id: string, dto: UpdateEmployeeDto, updatedBy?: string) {
+  async update(id: string, dto: UpdateEmployeeDto, updatedBy?: string, userPermissions: string[] = []) {
+    // Validate payroll permission before processing
+    this.validatePayrollPermission(
+      dto as unknown as Record<string, unknown>,
+      userPermissions,
+      'hr:employee:update:payroll',
+    );
+
     const employee = await this.employeeRepository.findOne({
       where: { id, deletedAt: IsNull() },
     });
