@@ -811,6 +811,7 @@ const status = isLate ? AttendanceStatus.LATE : AttendanceStatus.PRESENT;
 | `/inventory/warehouses/:id/statistics` | GET | `inventory:warehouse:read` | Get warehouse statistics |
 | `/inventory/stock-transactions` | GET | `inventory:stock:read` | List stock transactions with pagination |
 | `/inventory/stock-transactions/:id` | GET | `inventory:stock:read` | Get stock transaction by ID |
+| `/inventory/stock-transactions/warehouse/:warehouseId` | GET | `inventory:stock:read` | Get stock transactions by warehouse |
 | `/inventory/stock-transactions/inbound` | POST | `inventory:stock:create` | Create inbound transaction |
 | `/inventory/stock-transactions/outbound` | POST | `inventory:stock:create` | Create outbound transaction |
 | `/inventory/stock-transactions/adjustment` | POST | `inventory:stock:create` | Create adjustment transaction |
@@ -1015,6 +1016,33 @@ export class Warehouse extends BaseEntity {
   isActive: boolean;
 }
 ```
+
+### Product Stock Response Shape
+
+The product stock endpoint returns a structured response with total stock and breakdown by warehouse:
+
+```typescript
+// GET /inventory/products/:id/stock response
+interface ProductStockResponse {
+  totalStock: number;      // Sum of all stock across warehouses
+  breakdown: Stock[];      // Stock records per warehouse
+}
+
+// Stock record structure
+interface Stock {
+  id: string;
+  productId: string;
+  warehouseId: string;
+  warehouse?: Warehouse;
+  quantity: number;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+**Usage:**
+- `totalStock`: Quick access to total quantity across all warehouses
+- `breakdown`: Detailed stock per warehouse for inventory management
 
 ### Inventory Dashboard Metrics
 

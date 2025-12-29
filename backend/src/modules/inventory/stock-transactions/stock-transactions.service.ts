@@ -13,7 +13,13 @@ import {
 import { Stock } from '../../../entities/inventory/stock.entity';
 import { Product } from '../../../entities/inventory/product.entity';
 import { Warehouse } from '../../../entities/inventory/warehouse.entity';
-import { CreateStockTransactionDto, StockTransactionQueryDto } from './dto';
+import {
+  CreateInboundDto,
+  CreateOutboundDto,
+  CreateAdjustmentDto,
+  CreateTransferDto,
+  StockTransactionQueryDto,
+} from './dto';
 
 @Injectable()
 export class StockTransactionsService {
@@ -175,13 +181,9 @@ export class StockTransactionsService {
    * Create an inbound stock transaction
    */
   async createInbound(
-    dto: CreateStockTransactionDto,
+    dto: CreateInboundDto,
     userId: string,
   ): Promise<StockTransaction> {
-    if (dto.transactionType !== TransactionType.INBOUND) {
-      throw new BadRequestException('Transaction type must be INBOUND');
-    }
-
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -237,7 +239,7 @@ export class StockTransactionsService {
       const transaction = queryRunner.manager.create(StockTransaction, {
         transactionNumber,
         transactionType: TransactionType.INBOUND,
-        transactionDate: new Date(),
+        transactionDate: dto.transactionDate || new Date(),
         productId: dto.productId,
         warehouseId: dto.warehouseId,
         quantity: dto.quantity,
@@ -267,13 +269,9 @@ export class StockTransactionsService {
    * Create an outbound stock transaction
    */
   async createOutbound(
-    dto: CreateStockTransactionDto,
+    dto: CreateOutboundDto,
     userId: string,
   ): Promise<StockTransaction> {
-    if (dto.transactionType !== TransactionType.OUTBOUND) {
-      throw new BadRequestException('Transaction type must be OUTBOUND');
-    }
-
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -331,7 +329,7 @@ export class StockTransactionsService {
       const transaction = queryRunner.manager.create(StockTransaction, {
         transactionNumber,
         transactionType: TransactionType.OUTBOUND,
-        transactionDate: new Date(),
+        transactionDate: dto.transactionDate || new Date(),
         productId: dto.productId,
         warehouseId: dto.warehouseId,
         quantity: dto.quantity,
@@ -361,13 +359,9 @@ export class StockTransactionsService {
    * Create an adjustment stock transaction
    */
   async createAdjustment(
-    dto: CreateStockTransactionDto,
+    dto: CreateAdjustmentDto,
     userId: string,
   ): Promise<StockTransaction> {
-    if (dto.transactionType !== TransactionType.ADJUSTMENT) {
-      throw new BadRequestException('Transaction type must be ADJUSTMENT');
-    }
-
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -410,31 +404,31 @@ export class StockTransactionsService {
         stock = queryRunner.manager.create(Stock, {
           productId: dto.productId,
           warehouseId: dto.warehouseId,
-          quantity: dto.quantity,
+          quantity: dto.newQuantity,
           createdBy: userId,
         });
       } else {
         // Set stock to the new quantity (adjustment sets absolute value)
-        stock.quantity = dto.quantity;
+        stock.quantity = dto.newQuantity;
         stock.updatedBy = userId;
       }
 
       await queryRunner.manager.save(Stock, stock);
 
       // Calculate the adjustment difference for notes
-      const adjustmentDiff = dto.quantity - previousQuantity;
-      const adjustmentNote = `Adjusted from ${previousQuantity} to ${dto.quantity} (${adjustmentDiff >= 0 ? '+' : ''}${adjustmentDiff})`;
+      const adjustmentDiff = dto.newQuantity - previousQuantity;
+      const adjustmentNote = `Adjusted from ${previousQuantity} to ${dto.newQuantity} (${adjustmentDiff >= 0 ? '+' : ''}${adjustmentDiff})`;
 
       // Create stock transaction record
       const transaction = queryRunner.manager.create(StockTransaction, {
         transactionNumber,
         transactionType: TransactionType.ADJUSTMENT,
-        transactionDate: new Date(),
+        transactionDate: dto.transactionDate || new Date(),
         productId: dto.productId,
         warehouseId: dto.warehouseId,
-        quantity: dto.quantity,
+        quantity: dto.newQuantity,
         referenceNumber: dto.referenceNumber,
-        notes: dto.notes ? `${dto.notes} | ${adjustmentNote}` : adjustmentNote,
+        notes: `${dto.notes} | ${adjustmentNote}`,
         createdBy: userId,
       });
 
@@ -459,18 +453,9 @@ export class StockTransactionsService {
    * Create a transfer stock transaction
    */
   async createTransfer(
-    dto: CreateStockTransactionDto,
+    dto: CreateTransferDto,
     userId: string,
   ): Promise<StockTransaction> {
-    if (dto.transactionType !== TransactionType.TRANSFER) {
-      throw new BadRequestException('Transaction type must be TRANSFER');
-    }
-
-    if (!dto.targetWarehouseId) {
-      throw new BadRequestException(
-        'Target warehouse is required for TRANSFER transactions',
-      );
-    }
 
     if (dto.warehouseId === dto.targetWarehouseId) {
       throw new BadRequestException(
@@ -567,7 +552,7 @@ export class StockTransactionsService {
       const transaction = queryRunner.manager.create(StockTransaction, {
         transactionNumber,
         transactionType: TransactionType.TRANSFER,
-        transactionDate: new Date(),
+        transactionDate: dto.transactionDate || new Date(),
         productId: dto.productId,
         warehouseId: dto.warehouseId,
         fromWarehouseId: dto.warehouseId,
@@ -629,5 +614,107 @@ export class StockTransactionsService {
     queryBuilder.orderBy('transaction.transactionDate', 'DESC');
 
     return queryBuilder.getMany();
+  }
+
+  /**
+   * Get stock transactions by warehouse
+   */
+  async findByWarehouse(
+    warehouseId: string,
+    query: StockTransactionQueryDto,
+  ): Promise<{
+    data: StockTransaction[];
+    meta: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  }> {
+    // Validate warehouse exists
+    const warehouse = await this.warehouseRepository.findOne({
+      where: { id: warehouseId, deletedAt: IsNull() },
+    });
+    if (!warehouse) {
+      throw new NotFoundException(`Warehouse with ID ${warehouseId} not found`);
+    }
+
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      transactionType,
+      productId,
+      dateFrom,
+      dateTo,
+      sortBy = 'createdAt',
+      sortOrder = 'DESC',
+    } = query;
+
+    const queryBuilder = this.stockTransactionRepository
+      .createQueryBuilder('transaction')
+      .leftJoinAndSelect('transaction.product', 'product')
+      .leftJoinAndSelect('transaction.warehouse', 'warehouse')
+      .leftJoinAndSelect('transaction.fromWarehouse', 'fromWarehouse')
+      .leftJoinAndSelect('transaction.toWarehouse', 'toWarehouse')
+      .where('transaction.deletedAt IS NULL')
+      .andWhere(
+        '(transaction.warehouseId = :warehouseId OR transaction.fromWarehouseId = :warehouseId OR transaction.toWarehouseId = :warehouseId)',
+        { warehouseId },
+      );
+
+    // Search by transaction number or reference number
+    if (search) {
+      queryBuilder.andWhere(
+        '(transaction.transactionNumber ILIKE :search OR transaction.referenceNumber ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Filter by transaction type
+    if (transactionType) {
+      queryBuilder.andWhere('transaction.transactionType = :transactionType', {
+        transactionType,
+      });
+    }
+
+    // Filter by product
+    if (productId) {
+      queryBuilder.andWhere('transaction.productId = :productId', { productId });
+    }
+
+    // Filter by date range
+    if (dateFrom && dateTo) {
+      queryBuilder.andWhere(
+        'transaction.transactionDate BETWEEN :dateFrom AND :dateTo',
+        { dateFrom, dateTo },
+      );
+    } else if (dateFrom) {
+      queryBuilder.andWhere('transaction.transactionDate >= :dateFrom', {
+        dateFrom,
+      });
+    } else if (dateTo) {
+      queryBuilder.andWhere('transaction.transactionDate <= :dateTo', { dateTo });
+    }
+
+    // Sorting
+    const sortColumn = `transaction.${sortBy}`;
+    queryBuilder.orderBy(sortColumn, sortOrder);
+
+    // Pagination
+    const skip = (page - 1) * limit;
+    queryBuilder.skip(skip).take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }

@@ -1126,6 +1126,15 @@ export interface StockTransaction {
 
 #### Inventory API Client
 
+The Inventory API client uses **type-specific endpoints** for stock transactions instead of a generic `create` method. This pattern ensures proper validation and business logic is applied for each transaction type.
+
+**API Endpoint Pattern** (Stock Transactions):
+- `POST /inventory/stock-transactions/inbound` - Inbound transactions (receiving stock)
+- `POST /inventory/stock-transactions/outbound` - Outbound transactions (issuing stock)
+- `POST /inventory/stock-transactions/adjustment` - Adjustment transactions (correcting stock)
+- `POST /inventory/stock-transactions/transfer` - Transfer transactions (moving between warehouses)
+- `GET /inventory/stock-transactions/warehouse/:warehouseId` - Get transactions by warehouse
+
 **API Endpoints** ([`inventory.ts`](frontend/src/lib/api/endpoints/inventory.ts)):
 ```typescript
 export const inventoryApi = {
@@ -1143,12 +1152,40 @@ export const inventoryApi = {
       client.delete(`/inventory/categories/${id}`),
   },
   
-  // Stock Transactions
+  // Products - includes stock breakdown endpoint
+  products: {
+    getAll: (params?: ProductQueryParams) =>
+      client.get<PaginatedResponse<Product>>('/inventory/products', { params }),
+    getById: (id: string) =>
+      client.get<Product>(`/inventory/products/${id}`),
+    create: (data: CreateProductDto) =>
+      client.post<Product>('/inventory/products', data),
+    update: (id: string, data: UpdateProductDto) =>
+      client.patch<Product>(`/inventory/products/${id}`, data),
+    delete: (id: string) =>
+      client.delete(`/inventory/products/${id}`),
+    uploadPhoto: (id: string, file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return client.post<Product>(`/inventory/products/${id}/photo`, formData);
+    },
+    // Returns { totalStock: number, breakdown: Stock[] }
+    getStock: (id: string) =>
+      client.get<ProductStockResponse>(`/inventory/products/${id}/stock`),
+    getMovementHistory: (id: string, params?: MovementHistoryParams) =>
+      client.get<PaginatedResponse<StockTransaction>>(`/inventory/products/${id}/movement-history`, { params }),
+  },
+  
+  // Stock Transactions - uses type-specific endpoints
   stockTransactions: {
     getAll: (params?: StockTransactionQueryParams) =>
       client.get<PaginatedResponse<StockTransaction>>('/inventory/stock-transactions', { params }),
     getById: (id: string) =>
       client.get<StockTransaction>(`/inventory/stock-transactions/${id}`),
+    // Get transactions by warehouse
+    getByWarehouse: (warehouseId: string, params?: StockTransactionQueryParams) =>
+      client.get<PaginatedResponse<StockTransaction>>(`/inventory/stock-transactions/warehouse/${warehouseId}`, { params }),
+    // Type-specific creation endpoints (not generic create)
     createInbound: (data: CreateInboundDto) =>
       client.post<StockTransaction>('/inventory/stock-transactions/inbound', data),
     createOutbound: (data: CreateOutboundDto) =>
@@ -1172,3 +1209,51 @@ export const inventoryApi = {
   },
 };
 ```
+
+#### Product Stock Response Shape
+
+The product stock endpoint returns a structured response with total stock and breakdown by warehouse:
+
+```typescript
+// GET /inventory/products/:id/stock response
+interface ProductStockResponse {
+  totalStock: number;      // Sum of all stock across warehouses
+  breakdown: Stock[];      // Stock records per warehouse
+}
+
+// Stock record structure
+interface Stock {
+  id: string;
+  productId: string;
+  warehouseId: string;
+  warehouse?: Warehouse;
+  quantity: number;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+**Usage**:
+- `totalStock`: Quick access to total quantity across all warehouses
+- `breakdown`: Detailed stock per warehouse for inventory management
+
+#### Stock Adjustment DTO
+
+The adjustment transaction uses `newQuantity` field which allows both increase and decrease of stock:
+
+```typescript
+// CreateAdjustmentDto
+interface CreateAdjustmentDto {
+  productId: string;
+  warehouseId: string;
+  newQuantity: number;      // Target quantity (can be higher or lower than current)
+  transactionDate?: Date;   // Optional transaction date
+  referenceNumber?: string;
+  notes?: string;
+}
+```
+
+**Adjustment Logic**:
+- If `newQuantity > currentStock`: Stock increases (positive adjustment)
+- If `newQuantity < currentStock`: Stock decreases (negative adjustment)
+- The `adjustmentQuantity` is calculated as `newQuantity - currentStock`

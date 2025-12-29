@@ -33,7 +33,6 @@ import {
   stockTransactionsApi,
 } from '@/lib/api/endpoints/inventory';
 import type { Product, Warehouse } from '@/lib/types/inventory';
-import { TransactionType } from '@/lib/types/inventory';
 
 const formSchema = z
   .object({
@@ -152,11 +151,10 @@ export function TransferForm() {
 
     setIsLoading(true);
     try {
-      await stockTransactionsApi.create({
-        transactionType: TransactionType.TRANSFER,
+      await stockTransactionsApi.createTransfer({
         productId: data.productId,
-        warehouseId: data.warehouseId,
-        targetWarehouseId: data.targetWarehouseId,
+        sourceWarehouseId: data.warehouseId,
+        destinationWarehouseId: data.targetWarehouseId,
         quantity: data.quantity,
         referenceNumber: data.referenceNumber || undefined,
         notes: data.notes || undefined,

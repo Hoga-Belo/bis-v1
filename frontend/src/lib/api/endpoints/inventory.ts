@@ -21,7 +21,10 @@ import type {
   UpdateWarehouseRequest,
   WarehouseQueryParams,
   StockTransaction,
-  CreateStockTransactionRequest,
+  CreateInboundRequest,
+  CreateOutboundRequest,
+  CreateAdjustmentRequest,
+  CreateTransferRequest,
   StockTransactionQueryParams,
   DashboardMetrics,
   InventoryOverview,
@@ -31,8 +34,8 @@ import type {
   TransactionTrend,
   RecentTransaction,
   StockMovement,
-  StockBreakdown,
   Stock,
+  ProductStockResponse,
 } from '../../types/inventory';
 import type { ApiResponse } from '../../types/api';
 
@@ -145,9 +148,7 @@ export const productsApi = {
     return apiClient.get('/inventory/products/low-stock');
   },
 
-  getStock: async (
-    id: string
-  ): Promise<ApiResponse<{ totalStock: number; breakdown: StockBreakdown[] }>> => {
+  getStock: async (id: string): Promise<ApiResponse<ProductStockResponse>> => {
     return apiClient.get(`/inventory/products/${id}/stock`);
   },
 
@@ -215,25 +216,43 @@ export const stockTransactionsApi = {
     return apiClient.get(`/inventory/stock-transactions/${id}`);
   },
 
-  create: async (
-    data: CreateStockTransactionRequest
+  createInbound: async (
+    data: CreateInboundRequest
   ): Promise<ApiResponse<StockTransaction>> => {
-    return apiClient.post('/inventory/stock-transactions', data);
+    return apiClient.post('/inventory/stock-transactions/inbound', data);
+  },
+
+  createOutbound: async (
+    data: CreateOutboundRequest
+  ): Promise<ApiResponse<StockTransaction>> => {
+    return apiClient.post('/inventory/stock-transactions/outbound', data);
+  },
+
+  createAdjustment: async (
+    data: CreateAdjustmentRequest
+  ): Promise<ApiResponse<StockTransaction>> => {
+    return apiClient.post('/inventory/stock-transactions/adjustment', data);
+  },
+
+  createTransfer: async (
+    data: CreateTransferRequest
+  ): Promise<ApiResponse<StockTransaction>> => {
+    return apiClient.post('/inventory/stock-transactions/transfer', data);
   },
 
   getByProduct: async (
     productId: string,
-    params?: { page?: number; limit?: number }
+    params?: { page?: number; limit?: number; warehouseId?: string }
   ): Promise<ApiResponse<StockTransaction[]>> => {
     return apiClient.get(
-      `/inventory/stock-transactions/product/${productId}`,
+      `/inventory/stock-transactions/product/${productId}/history`,
       params as Record<string, unknown>
     );
   },
 
   getByWarehouse: async (
     warehouseId: string,
-    params?: { page?: number; limit?: number }
+    params?: StockTransactionQueryParams
   ): Promise<ApiResponse<StockTransaction[]>> => {
     return apiClient.get(
       `/inventory/stock-transactions/warehouse/${warehouseId}`,

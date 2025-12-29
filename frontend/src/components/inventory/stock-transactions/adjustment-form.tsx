@@ -34,7 +34,6 @@ import {
   stockTransactionsApi,
 } from '@/lib/api/endpoints/inventory';
 import type { Product, Warehouse } from '@/lib/types/inventory';
-import { TransactionType } from '@/lib/types/inventory';
 
 const ADJUSTMENT_REASONS = [
   { value: 'STOCK_OPNAME', label: 'Stock Opname' },
@@ -152,8 +151,7 @@ export function AdjustmentForm() {
       )?.label;
       const fullNotes = `[${reasonLabel}] ${data.notes}`;
 
-      await stockTransactionsApi.create({
-        transactionType: TransactionType.ADJUSTMENT,
+      await stockTransactionsApi.createAdjustment({
         productId: data.productId,
         warehouseId: data.warehouseId,
         quantity: adjustedQuantity,

@@ -33,6 +33,34 @@ Semua modul inti telah diimplementasikan, diuji, dan siap untuk production:
 
 ## Recent Changes
 
+### Inventory Module API Alignment Fixes (2025-12-29)
+
+#### Fix 1: Stock Transaction API Paths Alignment
+- **Backend**: Added `GET /inventory/stock-transactions/warehouse/:warehouseId` endpoint in [`stock-transactions.controller.ts`](backend/src/modules/inventory/stock-transactions/stock-transactions.controller.ts)
+- **Backend**: Added `findByWarehouse(warehouseId: string)` method in [`stock-transactions.service.ts`](backend/src/modules/inventory/stock-transactions/stock-transactions.service.ts)
+- **Frontend**: Updated `stockTransactionsApi` in [`inventory.ts`](frontend/src/lib/api/endpoints/inventory.ts) to:
+  - Use specific endpoints (`/inbound`, `/outbound`, `/adjustment`, `/transfer`) instead of generic `create`
+  - Added `getByWarehouse(warehouseId: string)` method
+
+#### Fix 2: Stock Adjustment TransactionDate Support
+- Verified all DTOs already have `transactionDate?: Date` field
+- `CreateAdjustmentDto` uses `newQuantity` field allowing both increase and decrease (no constraint on positive/negative)
+
+#### Fix 3: Product Stock Breakdown API Shape
+- **Backend**: Updated `getProductStock()` in [`products.service.ts`](backend/src/modules/inventory/products/products.service.ts) to return `{ totalStock: number, breakdown: Stock[] }` instead of raw array
+- Frontend already aligned with this response shape
+
+#### Fix 4: Dashboard CategoryType for Fixed vs Consumable
+- **Backend**: Added `categoryType: CategoryType` field to `StockByCategoryDto` in [`dashboard-metrics.dto.ts`](backend/src/modules/inventory/dashboard/dto/dashboard-metrics.dto.ts)
+- **Backend**: Updated `getStockByCategory()` in [`dashboard.service.ts`](backend/src/modules/inventory/dashboard/dashboard.service.ts) to select and return `category.type`
+
+#### Fix 5: Permission Keys Alignment
+- **Frontend**: Updated [`quick-actions-card.tsx`](frontend/src/components/inventory/dashboard/quick-actions-card.tsx) to use `inventory:stock:create` and `inventory:stock:read` matching backend decorators
+
+#### Verification Results
+- Backend: `npm run lint && npx tsc --noEmit` - Exit code 0
+- Frontend: `npm run lint && npx tsc --noEmit` - Exit code 0
+
 ### Inventory Module Implementation (2025-12-29)
 
 #### Backend Inventory Module Structure

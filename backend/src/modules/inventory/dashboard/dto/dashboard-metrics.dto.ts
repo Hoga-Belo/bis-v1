@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { TransactionType } from '../../../../entities/inventory/stock-transaction.entity';
+import { CategoryType } from '../../../../entities/inventory/category.entity';
 
 export class InventoryOverviewDto {
   @ApiProperty({ description: 'Total number of products' })
@@ -121,6 +122,9 @@ export class StockByCategoryDto {
 
   @ApiProperty({ description: 'Category name' })
   categoryName: string;
+
+  @ApiProperty({ description: 'Category type', enum: CategoryType })
+  categoryType: CategoryType;
 
   @ApiProperty({ description: 'Total stock quantity for this category' })
   totalStock: number;

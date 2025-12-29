@@ -26,7 +26,7 @@ export function QuickActionsCard() {
       <CardContent className="space-y-3">
         {/* Transaction Actions */}
         <div className="grid grid-cols-2 gap-3">
-          <PermissionGate permissions={['inventory:stock-transaction:create']}>
+          <PermissionGate permissions={['inventory:stock:create']}>
             <Button
               className="w-full bg-green-500 hover:bg-green-600 text-white"
               asChild
@@ -38,7 +38,7 @@ export function QuickActionsCard() {
             </Button>
           </PermissionGate>
 
-          <PermissionGate permissions={['inventory:stock-transaction:create']}>
+          <PermissionGate permissions={['inventory:stock:create']}>
             <Button
               variant="destructive"
               className="w-full"
@@ -51,7 +51,7 @@ export function QuickActionsCard() {
             </Button>
           </PermissionGate>
 
-          <PermissionGate permissions={['inventory:stock-transaction:create']}>
+          <PermissionGate permissions={['inventory:stock:create']}>
             <Button
               className="w-full bg-blue-500 hover:bg-blue-600 text-white"
               asChild
@@ -63,7 +63,7 @@ export function QuickActionsCard() {
             </Button>
           </PermissionGate>
 
-          <PermissionGate permissions={['inventory:stock-transaction:create']}>
+          <PermissionGate permissions={['inventory:stock:create']}>
             <Button
               className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
               asChild

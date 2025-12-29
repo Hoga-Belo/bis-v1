@@ -33,7 +33,6 @@ import {
   stockTransactionsApi,
 } from '@/lib/api/endpoints/inventory';
 import type { Product, Warehouse } from '@/lib/types/inventory';
-import { TransactionType } from '@/lib/types/inventory';
 
 const formSchema = z.object({
   productId: z.string().min(1, 'Produk harus dipilih'),
@@ -127,8 +126,7 @@ export function OutboundForm() {
 
     setIsLoading(true);
     try {
-      await stockTransactionsApi.create({
-        transactionType: TransactionType.OUTBOUND,
+      await stockTransactionsApi.createOutbound({
         productId: data.productId,
         warehouseId: data.warehouseId,
         quantity: data.quantity,

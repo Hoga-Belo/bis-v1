@@ -260,6 +260,50 @@ export interface CreateStockTransactionRequest {
   notes?: string;
 }
 
+// Specific request types for each transaction type
+export interface CreateInboundRequest {
+  productId: string;
+  warehouseId: string;
+  quantity: number;
+  referenceNumber?: string;
+  notes?: string;
+  transactionDate?: string;
+}
+
+export interface CreateOutboundRequest {
+  productId: string;
+  warehouseId: string;
+  quantity: number;
+  referenceNumber?: string;
+  notes?: string;
+  transactionDate?: string;
+}
+
+export interface CreateAdjustmentRequest {
+  productId: string;
+  warehouseId: string;
+  quantity: number;
+  newQuantity?: number;
+  notes: string; // Required for adjustments
+  transactionDate?: string;
+}
+
+export interface CreateTransferRequest {
+  productId: string;
+  sourceWarehouseId: string;
+  destinationWarehouseId: string;
+  quantity: number;
+  referenceNumber?: string;
+  notes?: string;
+  transactionDate?: string;
+}
+
+// Product stock response
+export interface ProductStockResponse {
+  totalStock: number;
+  breakdown: Stock[];
+}
+
 export interface StockTransactionQueryParams {
   page?: number;
   limit?: number;

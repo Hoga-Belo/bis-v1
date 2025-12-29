@@ -33,7 +33,6 @@ import type {
   Product,
   Warehouse,
   TransactionType,
-  CreateStockTransactionRequest,
 } from '@/lib/types/inventory';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -139,8 +138,8 @@ export function StockTransactionForm({
     try {
       setLoading(true);
 
-      const request: CreateStockTransactionRequest = {
-        transactionType: data.transactionType as TransactionType,
+      let response;
+      const baseRequest = {
         productId: data.productId,
         warehouseId: data.warehouseId,
         quantity: data.quantity,
@@ -148,11 +147,40 @@ export function StockTransactionForm({
         notes: data.notes || undefined,
       };
 
-      if (data.transactionType === 'TRANSFER' && data.targetWarehouseId) {
-        request.targetWarehouseId = data.targetWarehouseId;
+      switch (data.transactionType) {
+        case 'INBOUND':
+          response = await stockTransactionsApi.createInbound(baseRequest);
+          break;
+        case 'OUTBOUND':
+          response = await stockTransactionsApi.createOutbound(baseRequest);
+          break;
+        case 'ADJUSTMENT':
+          response = await stockTransactionsApi.createAdjustment({
+            productId: data.productId,
+            warehouseId: data.warehouseId,
+            quantity: data.quantity,
+            newQuantity: data.quantity,
+            notes: data.notes || '',
+          });
+          break;
+        case 'TRANSFER':
+          if (!data.targetWarehouseId) {
+            toast.error('Gudang tujuan harus dipilih untuk transfer');
+            return;
+          }
+          response = await stockTransactionsApi.createTransfer({
+            productId: data.productId,
+            sourceWarehouseId: data.warehouseId,
+            destinationWarehouseId: data.targetWarehouseId,
+            quantity: data.quantity,
+            referenceNumber: data.referenceNumber || undefined,
+            notes: data.notes || undefined,
+          });
+          break;
+        default:
+          toast.error('Tipe transaksi tidak valid');
+          return;
       }
-
-      const response = await stockTransactionsApi.create(request);
 
       if (response.success) {
         toast.success('Transaksi berhasil dibuat');

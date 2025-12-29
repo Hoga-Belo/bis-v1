@@ -374,7 +374,10 @@ export class ProductsService {
   /**
    * Get stock breakdown by warehouse for a product
    */
-  async getProductStock(id: string): Promise<StockByWarehouse[]> {
+  async getProductStock(id: string): Promise<{
+    totalStock: number;
+    breakdown: StockByWarehouse[];
+  }> {
     const product = await this.productRepository.findOne({
       where: { id, deletedAt: IsNull() },
     });
@@ -388,12 +391,19 @@ export class ProductsService {
       relations: ['warehouse'],
     });
 
-    return stocks.map((stock) => ({
+    const breakdown = stocks.map((stock) => ({
       warehouseId: stock.warehouseId,
       warehouseName: stock.warehouse?.name || '',
       warehouseCode: stock.warehouse?.code || '',
       quantity: stock.quantity,
       lastStockOpnameDate: stock.lastStockOpnameDate,
     }));
+
+    const totalStock = breakdown.reduce((sum, item) => sum + item.quantity, 0);
+
+    return {
+      totalStock,
+      breakdown,
+    };
   }
 }

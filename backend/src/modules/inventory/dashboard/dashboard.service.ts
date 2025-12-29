@@ -218,17 +218,20 @@ export class DashboardService {
       .leftJoin('product.stocks', 'stock', 'stock.deletedAt IS NULL')
       .select('category.id', 'categoryId')
       .addSelect('category.name', 'categoryName')
+      .addSelect('category.type', 'categoryType')
       .addSelect('COALESCE(SUM(stock.quantity), 0)', 'totalStock')
       .addSelect('COUNT(DISTINCT product.id)', 'productCount')
       .where('category.deletedAt IS NULL')
       .groupBy('category.id')
       .addGroupBy('category.name')
+      .addGroupBy('category.type')
       .orderBy('category.name', 'ASC')
       .getRawMany();
 
     return result.map((item) => ({
       categoryId: item.categoryId,
       categoryName: item.categoryName,
+      categoryType: item.categoryType,
       totalStock: parseInt(item.totalStock, 10) || 0,
       productCount: parseInt(item.productCount, 10) || 0,
     }));

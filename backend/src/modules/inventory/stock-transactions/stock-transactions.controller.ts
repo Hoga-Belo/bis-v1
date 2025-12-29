@@ -16,7 +16,13 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { StockTransactionsService } from './stock-transactions.service';
-import { CreateStockTransactionDto, StockTransactionQueryDto } from './dto';
+import {
+  CreateInboundDto,
+  CreateOutboundDto,
+  CreateAdjustmentDto,
+  CreateTransferDto,
+  StockTransactionQueryDto,
+} from './dto';
 import { RequirePermissions } from '../../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 
@@ -72,7 +78,7 @@ export class StockTransactionsController {
   @ApiResponse({ status: 400, description: 'Invalid request data' })
   @ApiResponse({ status: 404, description: 'Product or warehouse not found' })
   async createInbound(
-    @Body() dto: CreateStockTransactionDto,
+    @Body() dto: CreateInboundDto,
     @CurrentUser('id') userId: string,
   ) {
     return this.stockTransactionsService.createInbound(dto, userId);
@@ -91,7 +97,7 @@ export class StockTransactionsController {
   })
   @ApiResponse({ status: 404, description: 'Product or warehouse not found' })
   async createOutbound(
-    @Body() dto: CreateStockTransactionDto,
+    @Body() dto: CreateOutboundDto,
     @CurrentUser('id') userId: string,
   ) {
     return this.stockTransactionsService.createOutbound(dto, userId);
@@ -107,7 +113,7 @@ export class StockTransactionsController {
   @ApiResponse({ status: 400, description: 'Invalid request data' })
   @ApiResponse({ status: 404, description: 'Product or warehouse not found' })
   async createAdjustment(
-    @Body() dto: CreateStockTransactionDto,
+    @Body() dto: CreateAdjustmentDto,
     @CurrentUser('id') userId: string,
   ) {
     return this.stockTransactionsService.createAdjustment(dto, userId);
@@ -126,7 +132,7 @@ export class StockTransactionsController {
   })
   @ApiResponse({ status: 404, description: 'Product or warehouse not found' })
   async createTransfer(
-    @Body() dto: CreateStockTransactionDto,
+    @Body() dto: CreateTransferDto,
     @CurrentUser('id') userId: string,
   ) {
     return this.stockTransactionsService.createTransfer(dto, userId);
@@ -154,5 +160,30 @@ export class StockTransactionsController {
       productId,
       warehouseId,
     );
+  }
+
+  @Get('warehouse/:warehouseId')
+  @RequirePermissions('inventory:stock:read')
+  @ApiOperation({ summary: 'Get stock transactions by warehouse' })
+  @ApiParam({ name: 'warehouseId', description: 'Warehouse ID' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'transactionType', required: false, type: String })
+  @ApiQuery({ name: 'productId', required: false, type: String })
+  @ApiQuery({ name: 'dateFrom', required: false, type: Date })
+  @ApiQuery({ name: 'dateTo', required: false, type: Date })
+  @ApiQuery({ name: 'sortBy', required: false, type: String })
+  @ApiQuery({ name: 'sortOrder', required: false, enum: ['ASC', 'DESC'] })
+  @ApiResponse({
+    status: 200,
+    description: 'Stock transactions for warehouse retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Warehouse not found' })
+  async findByWarehouse(
+    @Param('warehouseId', ParseUUIDPipe) warehouseId: string,
+    @Query() query: StockTransactionQueryDto,
+  ) {
+    return this.stockTransactionsService.findByWarehouse(warehouseId, query);
   }
 }
