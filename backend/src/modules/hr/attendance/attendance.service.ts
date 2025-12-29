@@ -18,6 +18,38 @@ import {
 // Timezone for Asia/Jakarta (UTC+7)
 const JAKARTA_OFFSET = 7 * 60 * 60 * 1000;
 
+/**
+ * Mapped attendance response for frontend compatibility
+ */
+export interface MappedAttendance {
+  id: string;
+  employeeId: string;
+  date: string;
+  clockIn: string | null;
+  clockOut: string | null;
+  status: AttendanceStatus;
+  workHours: number | null;
+  clockInLocation: { lat: number; lng: number; address?: string } | null;
+  clockOutLocation: { lat: number; lng: number; address?: string } | null;
+  clockInMethod: string | null;
+  notes: string | null;
+  qrCode: string | null;
+  employee?: {
+    id: string;
+    nik: string;
+    fullName: string;
+  } | null;
+}
+
+/**
+ * Today attendance response with clock-in/out availability
+ */
+export interface TodayAttendanceResponse {
+  attendance: MappedAttendance | null;
+  canClockIn: boolean;
+  canClockOut: boolean;
+}
+
 @Injectable()
 export class AttendanceService {
   constructor(
@@ -87,9 +119,41 @@ export class AttendanceService {
   }
 
   /**
+   * Map attendance entity to frontend-compatible format
+   */
+  private mapAttendance(attendance: Attendance, includeEmployee = false): MappedAttendance {
+    const mapped: MappedAttendance = {
+      id: attendance.id,
+      employeeId: attendance.employeeId,
+      date: attendance.attendanceDate
+        ? attendance.attendanceDate.toISOString().split('T')[0]
+        : '',
+      clockIn: attendance.clockInTime ? attendance.clockInTime.toISOString() : null,
+      clockOut: attendance.clockOutTime ? attendance.clockOutTime.toISOString() : null,
+      status: attendance.status,
+      workHours: attendance.workHours ? Number(attendance.workHours) : null,
+      clockInLocation: attendance.clockInLocation as MappedAttendance['clockInLocation'],
+      clockOutLocation: attendance.clockOutLocation as MappedAttendance['clockOutLocation'],
+      clockInMethod: attendance.clockInMethod || null,
+      notes: attendance.notes || null,
+      qrCode: attendance.qrCode || null,
+    };
+
+    if (includeEmployee && attendance.employee) {
+      mapped.employee = {
+        id: attendance.employee.id,
+        nik: attendance.employee.nik,
+        fullName: attendance.employee.fullName,
+      };
+    }
+
+    return mapped;
+  }
+
+  /**
    * Clock in for an employee
    */
-  async clockIn(employeeId: string, dto: ClockInDto): Promise<Attendance> {
+  async clockIn(employeeId: string, dto: ClockInDto): Promise<MappedAttendance> {
     // Validate employee
     await this.validateEmployee(employeeId);
 
@@ -119,16 +183,18 @@ export class AttendanceService {
       clockInLocation: dto.location || null,
       clockInMethod: dto.method,
       status,
-      notes: dto.qrCode ? `QR Code: ${dto.qrCode}` : null,
+      qrCode: dto.qrCode || null,
+      notes: null,
     });
 
-    return this.attendanceRepository.save(attendance);
+    const saved = await this.attendanceRepository.save(attendance);
+    return this.mapAttendance(saved);
   }
 
   /**
    * Clock out for an employee
    */
-  async clockOut(employeeId: string, dto: ClockOutDto): Promise<Attendance> {
+  async clockOut(employeeId: string, dto: ClockOutDto): Promise<MappedAttendance> {
     const todayDate = this.getTodayDateString();
 
     // Find today's attendance record
@@ -159,7 +225,8 @@ export class AttendanceService {
     attendance.clockOutLocation = dto.location || null;
     attendance.workHours = workHours;
 
-    return this.attendanceRepository.save(attendance);
+    const saved = await this.attendanceRepository.save(attendance);
+    return this.mapAttendance(saved);
   }
 
   /**
@@ -198,7 +265,7 @@ export class AttendanceService {
     const data = await queryBuilder.getMany();
 
     return {
-      data,
+      data: data.map((attendance) => this.mapAttendance(attendance)),
       meta: {
         page,
         limit,
@@ -248,16 +315,7 @@ export class AttendanceService {
     const data = await queryBuilder.getMany();
 
     return {
-      data: data.map((attendance) => ({
-        ...attendance,
-        employee: attendance.employee
-          ? {
-              id: attendance.employee.id,
-              nik: attendance.employee.nik,
-              fullName: attendance.employee.fullName,
-            }
-          : null,
-      })),
+      data: data.map((attendance) => this.mapAttendance(attendance, true)),
       meta: {
         page,
         limit,
@@ -345,7 +403,7 @@ export class AttendanceService {
     id: string,
     dto: UpdateAttendanceStatusDto,
     updatedBy: string,
-  ): Promise<Attendance> {
+  ): Promise<MappedAttendance> {
     const attendance = await this.attendanceRepository.findOne({
       where: { id, deletedAt: IsNull() },
     });
@@ -360,22 +418,37 @@ export class AttendanceService {
     }
     attendance.updatedBy = updatedBy;
 
-    return this.attendanceRepository.save(attendance);
+    const saved = await this.attendanceRepository.save(attendance);
+    return this.mapAttendance(saved);
   }
 
   /**
-   * Get today's attendance record for an employee
+   * Get today's attendance record for an employee with clock-in/out availability
    */
-  async getTodayAttendance(employeeId: string): Promise<Attendance | null> {
+  async getTodayAttendance(employeeId: string): Promise<TodayAttendanceResponse> {
     const todayDate = this.getTodayDateString();
 
-    return this.attendanceRepository.findOne({
+    const attendance = await this.attendanceRepository.findOne({
       where: {
         employeeId,
         attendanceDate: new Date(todayDate),
         deletedAt: IsNull(),
       },
     });
+
+    if (!attendance) {
+      return {
+        attendance: null,
+        canClockIn: true,
+        canClockOut: false,
+      };
+    }
+
+    return {
+      attendance: this.mapAttendance(attendance),
+      canClockIn: false,
+      canClockOut: !attendance.clockOutTime,
+    };
   }
 
   /**
@@ -418,16 +491,7 @@ export class AttendanceService {
     const data = await queryBuilder.getMany();
 
     return {
-      data: data.map((attendance) => ({
-        ...attendance,
-        employee: attendance.employee
-          ? {
-              id: attendance.employee.id,
-              nik: attendance.employee.nik,
-              fullName: attendance.employee.fullName,
-            }
-          : null,
-      })),
+      data: data.map((attendance) => this.mapAttendance(attendance, true)),
       meta: {
         page,
         limit,

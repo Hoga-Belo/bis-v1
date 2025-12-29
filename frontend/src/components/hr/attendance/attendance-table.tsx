@@ -46,8 +46,6 @@ const statusConfig: Record<AttendanceStatus, { label: string; className: string 
   LEAVE: { label: 'Cuti', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
   SICK: { label: 'Sakit', className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
   PERMIT: { label: 'Izin', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
-  HOLIDAY: { label: 'Libur', className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' },
-  WEEKEND: { label: 'Akhir Pekan', className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' },
 };
 
 export function AttendanceTable({

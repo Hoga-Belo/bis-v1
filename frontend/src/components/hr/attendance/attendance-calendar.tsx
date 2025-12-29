@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Attendance, AttendanceStatus } from '@/lib/types/attendance';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
@@ -25,8 +24,6 @@ const statusColors: Record<AttendanceStatus, string> = {
   LEAVE: 'bg-blue-500',
   SICK: 'bg-purple-500',
   PERMIT: 'bg-orange-500',
-  HOLIDAY: 'bg-gray-400',
-  WEEKEND: 'bg-gray-300',
 };
 
 const statusLabels: Record<AttendanceStatus, string> = {
@@ -36,8 +33,6 @@ const statusLabels: Record<AttendanceStatus, string> = {
   LEAVE: 'Cuti',
   SICK: 'Sakit',
   PERMIT: 'Izin',
-  HOLIDAY: 'Libur',
-  WEEKEND: 'Akhir Pekan',
 };
 
 const DAYS_OF_WEEK = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -54,7 +49,7 @@ export function AttendanceCalendar({
   year: propYear,
   onMonthChange,
 }: AttendanceCalendarProps) {
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const [currentMonth, setCurrentMonth] = useState(propMonth ?? today.getMonth());
   const [currentYear, setCurrentYear] = useState(propYear ?? today.getFullYear());
 

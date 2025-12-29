@@ -1,3 +1,4 @@
+
 # Technology Stack
 
 ## Backend
@@ -9,6 +10,7 @@
 | PostgreSQL | 15+ | Primary relational database |
 | Passport.js | 0.7.x | Authentication middleware |
 | @nestjs/jwt | 10.x | JWT token generation and validation |
+| @nestjs/schedule | 4.x | Cron jobs and task scheduling |
 | class-validator | 0.14.x | DTO validation decorators |
 | class-transformer | 0.5.x | Object transformation and serialization |
 | bcrypt | 5.x | Password hashing |
@@ -229,6 +231,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
   "@nestjs/core": "^10.0.0",
   "@nestjs/jwt": "^10.0.0",
   "@nestjs/passport": "^10.0.0",
+  "@nestjs/schedule": "^4.0.0",
   "@nestjs/swagger": "^7.0.0",
   "@nestjs/typeorm": "^10.0.0",
   "typeorm": "^0.3.0",
@@ -355,4 +358,406 @@ export const excelUploadConfig = {
     cb(null, true);
   },
 };
+```
+
+### Geolocation API (Attendance Module)
+
+The Attendance module uses the browser's Geolocation API to capture employee location during clock-in/out operations.
+
+**Frontend Implementation** ([`clock-in-out-card.tsx`](frontend/src/components/hr/attendance/clock-in-out-card.tsx)):
+```typescript
+// Request geolocation permission and capture coordinates
+const getLocation = (): Promise<{ latitude: number; longitude: number } | null> => {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      () => resolve(null), // Fallback if permission denied
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+};
+```
+
+**Backend Storage**:
+- Geolocation stored as JSONB fields in Attendance entity
+- Fields: `clockInLocation`, `clockOutLocation` (both contain `{ lat, lng, address? }`)
+- All fields are nullable (geolocation is optional)
+
+### Attendance Field Mapping Pattern
+
+The Attendance module uses a field mapping pattern to transform entity fields to frontend-friendly names.
+
+**Backend Field Mapping** ([`attendance.service.ts`](backend/src/modules/hr/attendance/attendance.service.ts)):
+```typescript
+// Entity fields → Frontend fields mapping
+private mapAttendance(attendance: Attendance, includeEmployee = false): MappedAttendance {
+  const mapped: MappedAttendance = {
+    id: attendance.id,
+    employeeId: attendance.employeeId,
+    date: attendance.attendanceDate?.toISOString().split('T')[0] || '',  // attendanceDate → date
+    clockIn: attendance.clockInTime ? attendance.clockInTime.toISOString() : null,  // clockInTime → clockIn
+    clockOut: attendance.clockOutTime ? attendance.clockOutTime.toISOString() : null,  // clockOutTime → clockOut
+    status: attendance.status,
+    workHours: attendance.workHours,
+    clockInLocation: attendance.clockInLocation,
+    clockOutLocation: attendance.clockOutLocation,
+    clockInMethod: attendance.clockInMethod,
+    notes: attendance.notes,
+    qrCode: attendance.qrCode,
+  };
+  
+  if (includeEmployee && attendance.employee) {
+    mapped.employee = attendance.employee;
+  }
+  
+  return mapped;
+}
+```
+
+**Field Mapping Summary**:
+| Entity Field | Frontend Field | Format |
+|--------------|----------------|--------|
+| `attendanceDate` | `date` | YYYY-MM-DD string |
+| `clockInTime` | `clockIn` | ISO timestamp string or null |
+| `clockOutTime` | `clockOut` | ISO timestamp string or null |
+
+**Frontend Type Definition** ([`attendance.ts`](frontend/src/lib/types/attendance.ts)):
+```typescript
+export interface Attendance {
+  id: string;
+  employeeId: string;
+  date: string;           // YYYY-MM-DD format (mapped from attendanceDate)
+  clockIn: string | null; // ISO timestamp (mapped from clockInTime)
+  clockOut: string | null; // ISO timestamp (mapped from clockOutTime)
+  status: AttendanceStatus;
+  workHours: number | null;
+  clockInLocation: { lat: number; lng: number; address?: string } | null;
+  clockOutLocation: { lat: number; lng: number; address?: string } | null;
+  clockInMethod: ClockInMethod;
+  notes: string | null;
+  qrCode: string | null;
+  employee?: Employee;
+}
+```
+
+### QR Code Clock-In Support
+
+The Attendance module supports QR code scanning for clock-in operations.
+
+**ClockInMethod Enum** ([`attendance.entity.ts`](backend/src/entities/hr/attendance.entity.ts)):
+```typescript
+export enum ClockInMethod {
+  QR = 'QR',           // Clock-in via QR code scan
+  MANUAL = 'MANUAL',   // Manual clock-in by HR
+  LOCATION = 'LOCATION' // Clock-in with geolocation
+}
+```
+
+**Clock-In DTO** ([`clock-in.dto.ts`](backend/src/modules/hr/attendance/dto/clock-in.dto.ts)):
+```typescript
+export class ClockInDto {
+  @IsEnum(ClockInMethod)
+  method: ClockInMethod;  // Required: LOCATION or QR
+
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;      // Optional: for LOCATION method
+
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;     // Optional: for LOCATION method
+
+  @IsOptional()
+  @IsString()
+  qrCode?: string;        // Optional: for QR method
+}
+```
+
+**QR Code Storage**:
+- QR code value stored in `qrCode` field of Attendance entity
+- Used for verification and audit purposes
+- Frontend can display QR code for employee identification
+
+### Late Detection Logic
+
+The Attendance module implements late detection based on Asia/Jakarta timezone (UTC+7).
+
+**Backend Implementation** ([`attendance.service.ts`](backend/src/modules/hr/attendance/attendance.service.ts)):
+```typescript
+// Late threshold: 08:00 local time (Asia/Jakarta)
+const LATE_THRESHOLD_HOUR = 8;
+
+// Check if clock-in is late
+const clockInTime = new Date();
+const jakartaTime = new Date(clockInTime.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+const isLate = jakartaTime.getHours() >= LATE_THRESHOLD_HOUR;
+const status = isLate ? AttendanceStatus.LATE : AttendanceStatus.PRESENT;
+```
+
+**Work Hours Calculation**:
+```typescript
+// Calculate work hours when clocking out
+const clockInTime = attendance.clockInTime;
+const clockOutTime = new Date();
+const diffMs = clockOutTime.getTime() - clockInTime.getTime();
+const workHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100; // Round to 2 decimals
+```
+
+### Cron Jobs and Task Scheduling
+
+The system uses `@nestjs/schedule` for automated background tasks.
+
+**Leave Request Escalation** ([`leave-requests.service.ts`](backend/src/modules/hr/leave-requests/leave-requests.service.ts)):
+```typescript
+import { Cron, CronExpression } from '@nestjs/schedule';
+
+@Injectable()
+export class LeaveRequestsService {
+  // Runs daily at midnight to escalate pending requests
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleEscalation(): Promise<void> {
+    const escalatedCount = await this.approvalService.escalatePendingApprovals(3);
+    this.logger.log(`Escalated ${escalatedCount} pending leave requests`);
+  }
+}
+```
+
+**Escalation Logic** ([`approval.service.ts`](backend/src/modules/hr/approval/approval.service.ts)):
+```typescript
+async escalatePendingApprovals(slaDays: number): Promise<number> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - slaDays);
+
+  // Find pending requests older than SLA
+  const pendingRequests = await this.leaveRequestRepository.find({
+    where: {
+      status: LeaveStatus.PENDING,
+      createdAt: LessThan(cutoffDate),
+      delegateApproverId: IsNull(),
+    },
+    relations: ['approver'],
+  });
+
+  let escalatedCount = 0;
+  for (const request of pendingRequests) {
+    const delegate = await this.findDelegateApprover(request.approverId);
+    if (delegate) {
+      request.delegateApproverId = delegate.id;
+      await this.leaveRequestRepository.save(request);
+      escalatedCount++;
+    }
+  }
+
+  return escalatedCount;
+}
+```
+
+**Module Configuration** ([`leave-requests.module.ts`](backend/src/modules/hr/leave-requests/leave-requests.module.ts)):
+```typescript
+import { ScheduleModule } from '@nestjs/schedule';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([LeaveRequest, Employee, Attendance]),
+    ScheduleModule.forRoot(),
+    ApprovalModule,
+  ],
+  // ...
+})
+export class LeaveRequestsModule {}
+```
+
+### Approval Workflow Service
+
+The Approval module provides reusable approval workflow logic for leave requests and future approval-based features.
+
+**Service Methods** ([`approval.service.ts`](backend/src/modules/hr/approval/approval.service.ts)):
+```typescript
+@Injectable()
+export class ApprovalService {
+  // Detect approver from employee's manager hierarchy
+  async detectApprover(employeeId: string): Promise<Employee | null> {
+    const employee = await this.employeeRepository.findOne({
+      where: { id: employeeId },
+      relations: ['manager'],
+    });
+    return employee?.manager || null;
+  }
+
+  // Check if approver has overlapping approved leave
+  async checkApproverAvailability(
+    approverId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<boolean> {
+    const overlappingLeave = await this.leaveRequestRepository.findOne({
+      where: {
+        employeeId: approverId,
+        status: LeaveStatus.APPROVED,
+        startDate: LessThanOrEqual(endDate),
+        endDate: MoreThanOrEqual(startDate),
+      },
+    });
+    return !overlappingLeave; // Available if no overlapping leave
+  }
+
+  // Get skip-level manager (approver's manager)
+  async findDelegateApprover(approverId: string): Promise<Employee | null> {
+    const approver = await this.employeeRepository.findOne({
+      where: { id: approverId },
+      relations: ['manager'],
+    });
+    return approver?.manager || null;
+  }
+
+  // Get effective approver with automatic delegation
+  async findAvailableApprover(
+    employeeId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<{ approver: Employee | null; isDelegate: boolean }> {
+    const directApprover = await this.detectApprover(employeeId);
+    if (!directApprover) {
+      return { approver: null, isDelegate: false };
+    }
+
+    const isAvailable = await this.checkApproverAvailability(
+      directApprover.id,
+      startDate,
+      endDate,
+    );
+
+    if (isAvailable) {
+      return { approver: directApprover, isDelegate: false };
+    }
+
+    // Direct approver is on leave, find delegate
+    const delegate = await this.findDelegateApprover(directApprover.id);
+    return { approver: delegate, isDelegate: true };
+  }
+}
+```
+
+### Working Days Calculation
+
+The Leave module calculates working days excluding weekends.
+
+**Implementation** ([`leave-requests.service.ts`](backend/src/modules/hr/leave-requests/leave-requests.service.ts)):
+```typescript
+private calculateWorkingDays(startDate: Date, endDate: Date): number {
+  let count = 0;
+  const current = new Date(startDate);
+  
+  while (current <= endDate) {
+    const dayOfWeek = current.getDay();
+    // Exclude Saturday (6) and Sunday (0)
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      count++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  
+  return count;
+}
+```
+
+**Usage**:
+- Called when creating leave request to calculate `totalDays`
+- Used for leave balance deduction
+- Ensures accurate leave tracking
+
+### Leave Balance Tracking
+
+The system tracks annual and sick leave balances per employee per year.
+
+**Default Allocations**:
+- Annual Leave: 12 days per year
+- Sick Leave: 12 days per year
+
+**Balance Calculation** ([`leave-requests.service.ts`](backend/src/modules/hr/leave-requests/leave-requests.service.ts)):
+```typescript
+async getBalance(employeeId: string): Promise<LeaveBalance> {
+  const year = new Date().getFullYear();
+  
+  // Get approved leave requests for current year
+  const approvedRequests = await this.leaveRequestRepository.find({
+    where: {
+      employeeId,
+      status: LeaveStatus.APPROVED,
+      startDate: MoreThanOrEqual(new Date(`${year}-01-01`)),
+      endDate: LessThanOrEqual(new Date(`${year}-12-31`)),
+    },
+  });
+
+  // Calculate used days by type
+  const annualUsed = approvedRequests
+    .filter(r => r.leaveType === LeaveType.ANNUAL)
+    .reduce((sum, r) => sum + r.totalDays, 0);
+  
+  const sickUsed = approvedRequests
+    .filter(r => r.leaveType === LeaveType.SICK)
+    .reduce((sum, r) => sum + r.totalDays, 0);
+
+  return {
+    annualLeave: { total: 12, used: annualUsed, remaining: 12 - annualUsed },
+    sickLeave: { total: 12, used: sickUsed, remaining: 12 - sickUsed },
+  };
+}
+```
+
+### Attendance Record Auto-Creation on Leave Approval
+
+When a leave request is approved, attendance records are automatically created for the leave period.
+
+**Implementation** ([`leave-requests.service.ts`](backend/src/modules/hr/leave-requests/leave-requests.service.ts)):
+```typescript
+async approve(id: string, approverId: string, notes?: string): Promise<LeaveRequest> {
+  const request = await this.findOne(id);
+  
+  // Update request status
+  request.status = LeaveStatus.APPROVED;
+  request.approvedAt = new Date();
+  request.approvalNotes = notes;
+  await this.leaveRequestRepository.save(request);
+
+  // Create attendance records for leave period
+  const current = new Date(request.startDate);
+  while (current <= request.endDate) {
+    const dayOfWeek = current.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      // Determine attendance status based on leave type
+      let status: AttendanceStatus;
+      switch (request.leaveType) {
+        case LeaveType.SICK:
+          status = AttendanceStatus.SICK;
+          break;
+        case LeaveType.PERMIT:
+          status = AttendanceStatus.PERMIT;
+          break;
+        default:
+          status = AttendanceStatus.LEAVE;
+      }
+
+      await this.attendanceRepository.save({
+        employeeId: request.employeeId,
+        attendanceDate: new Date(current),
+        status,
+        notes: `Leave request: ${request.reason}`,
+      });
+    }
+    current.setDate(current.getDate() + 1);
+  }
+
+  return request;
+}
 ```

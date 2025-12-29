@@ -5,10 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { attendanceApi } from '@/lib/api/endpoints/attendance';
 import type { TodayAttendance, Attendance } from '@/lib/types/attendance';
+import { ClockInMethod } from '@/lib/types/attendance';
 import { toast } from 'sonner';
-import { Clock, MapPin, LogIn, LogOut, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Clock, MapPin, LogIn, LogOut, CheckCircle, XCircle, Loader2, QrCode } from 'lucide-react';
 
 interface ClockInOutCardProps {
   onClockAction?: (attendance: Attendance) => void;
@@ -20,6 +30,8 @@ export function ClockInOutCard({ onClockAction }: ClockInOutCardProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isClocking, setIsClocking] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [qrCodeInput, setQrCodeInput] = useState('');
 
   // Update current time every second
   useEffect(() => {
@@ -99,6 +111,7 @@ export function ClockInOutCard({ onClockAction }: ClockInOutCardProps) {
       const location = await getCurrentLocation();
       
       const response = await attendanceApi.clockIn({
+        method: ClockInMethod.LOCATION,
         location: location || undefined,
       });
 
@@ -133,6 +146,36 @@ export function ClockInOutCard({ onClockAction }: ClockInOutCardProps) {
     } catch (error) {
       console.error('Clock out failed:', error);
       toast.error('Gagal melakukan Clock Out');
+    } finally {
+      setIsClocking(false);
+    }
+  };
+
+  // Handle QR clock in
+  const handleQrClockIn = async () => {
+    if (!qrCodeInput.trim()) {
+      toast.error('Silakan masukkan kode QR');
+      return;
+    }
+
+    try {
+      setIsClocking(true);
+      
+      const response = await attendanceApi.clockIn({
+        method: ClockInMethod.QR,
+        qrCode: qrCodeInput.trim(),
+      });
+
+      if (response.success && response.data) {
+        toast.success('Clock In dengan QR berhasil!');
+        setShowQrModal(false);
+        setQrCodeInput('');
+        await fetchTodayAttendance();
+        onClockAction?.(response.data);
+      }
+    } catch (error) {
+      console.error('QR Clock in failed:', error);
+      toast.error('Gagal melakukan Clock In dengan QR');
     } finally {
       setIsClocking(false);
     }
@@ -298,6 +341,14 @@ export function ClockInOutCard({ onClockAction }: ClockInOutCardProps) {
             Clock In
           </Button>
           <Button
+            variant="secondary"
+            onClick={() => setShowQrModal(true)}
+            disabled={!todayAttendance?.canClockIn || isClocking}
+            title="Clock In dengan QR Code"
+          >
+            <QrCode className="h-4 w-4" />
+          </Button>
+          <Button
             className="flex-1"
             variant="outline"
             onClick={handleClockOut}
@@ -311,6 +362,57 @@ export function ClockInOutCard({ onClockAction }: ClockInOutCardProps) {
             Clock Out
           </Button>
         </div>
+
+        {/* QR Code Modal */}
+        <Dialog open={showQrModal} onOpenChange={setShowQrModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <QrCode className="h-5 w-5" />
+                Clock In dengan QR Code
+              </DialogTitle>
+              <DialogDescription>
+                Masukkan kode QR yang telah discan atau ketik kode secara manual.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                placeholder="Masukkan kode QR..."
+                value={qrCodeInput}
+                onChange={(e) => setQrCodeInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isClocking) {
+                    handleQrClockIn();
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowQrModal(false);
+                  setQrCodeInput('');
+                }}
+                disabled={isClocking}
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleQrClockIn}
+                disabled={isClocking || !qrCodeInput.trim()}
+              >
+                {isClocking ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <LogIn className="h-4 w-4 mr-2" />
+                )}
+                Clock In
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

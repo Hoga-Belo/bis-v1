@@ -1,13 +1,18 @@
 // Attendance status enum matching backend
 export enum AttendanceStatus {
   PRESENT = 'PRESENT',
-  ABSENT = 'ABSENT',
   LATE = 'LATE',
+  ABSENT = 'ABSENT',
   LEAVE = 'LEAVE',
   SICK = 'SICK',
   PERMIT = 'PERMIT',
-  HOLIDAY = 'HOLIDAY',
-  WEEKEND = 'WEEKEND',
+}
+
+// Clock-in method enum matching backend
+export enum ClockInMethod {
+  QR = 'QR',
+  MANUAL = 'MANUAL',
+  LOCATION = 'LOCATION',
 }
 
 // Attendance record interface
@@ -38,14 +43,14 @@ export interface Attendance {
 
 // Clock-in request
 export interface ClockInRequest {
-  location?: { lat: number; lng: number };
-  notes?: string;
+  method: ClockInMethod;
+  location?: { lat: number; lng: number; address?: string };
+  qrCode?: string;
 }
 
 // Clock-out request
 export interface ClockOutRequest {
-  location?: { lat: number; lng: number };
-  notes?: string;
+  location?: { lat: number; lng: number; address?: string };
 }
 
 // Attendance query params
@@ -81,4 +86,28 @@ export interface TodayAttendance {
   attendance: Attendance | null;
   canClockIn: boolean;
   canClockOut: boolean;
+}
+
+// Attendance response DTO (mapped from backend entity)
+export interface AttendanceResponseDto {
+  id: string;
+  employeeId: string;
+  employee?: {
+    id: string;
+    nik: string;
+    fullName: string;
+    department?: { id: string; name: string };
+    position?: { id: string; name: string };
+  };
+  date: string; // YYYY-MM-DD (mapped from attendanceDate)
+  clockIn?: string; // ISO timestamp (mapped from clockInTime)
+  clockOut?: string; // ISO timestamp (mapped from clockOutTime)
+  clockInLocation?: { lat: number; lng: number; address?: string };
+  clockOutLocation?: { lat: number; lng: number; address?: string };
+  clockInMethod?: ClockInMethod;
+  status: AttendanceStatus;
+  workHours?: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }

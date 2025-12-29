@@ -7,6 +7,7 @@ export enum LeaveType {
   MARRIAGE = 'MARRIAGE',
   BEREAVEMENT = 'BEREAVEMENT',
   UNPAID = 'UNPAID',
+  PERMIT = 'PERMIT',
   OTHER = 'OTHER',
 }
 
@@ -91,6 +92,7 @@ export interface LeaveBalance {
 
 // Leave statistics
 export interface LeaveStatistics {
+  year: number;
   totalRequests: number;
   pendingRequests: number;
   approvedRequests: number;

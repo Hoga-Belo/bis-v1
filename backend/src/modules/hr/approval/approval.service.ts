@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, LessThan } from 'typeorm';
 import { Employee, LeaveRequest } from '../../../entities/hr';
 import { LeaveStatus } from '../../../entities/hr/leave-request.entity';
 
@@ -309,5 +309,83 @@ export class ApprovalService {
       finalApprover,
       isDelegate,
     };
+  }
+
+  /**
+   * Escalate pending leave requests that have exceeded the SLA
+   *
+   * This method finds all pending leave requests older than the specified SLA days
+   * and escalates them to the delegate approver (skip-level manager).
+   *
+   * @param slaDays - Number of days after which to escalate (default: 3)
+   * @returns Number of requests escalated
+   */
+  async escalatePendingApprovals(slaDays: number = 3): Promise<number> {
+    this.logger.log(`Starting escalation check for requests older than ${slaDays} days`);
+
+    // Calculate the cutoff date
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - slaDays);
+
+    // Find all pending leave requests older than SLA
+    const pendingRequests = await this.leaveRequestRepository.find({
+      where: {
+        status: LeaveStatus.PENDING,
+        deletedAt: IsNull(),
+        createdAt: LessThan(cutoffDate),
+      },
+      relations: ['approver', 'employee'],
+    });
+
+    this.logger.log(`Found ${pendingRequests.length} pending requests older than ${slaDays} days`);
+
+    let escalatedCount = 0;
+
+    for (const request of pendingRequests) {
+      // Skip if no current approver
+      if (!request.approverId) {
+        this.logger.warn(`Request ${request.id} has no approver, skipping escalation`);
+        continue;
+      }
+
+      // Find delegate approver
+      const delegateApprover = await this.findDelegateApprover(request.approverId);
+
+      if (!delegateApprover) {
+        this.logger.warn(
+          `No delegate approver found for request ${request.id}, cannot escalate`,
+        );
+        continue;
+      }
+
+      // Check if delegate is available for the leave period
+      const isDelegateAvailable = await this.checkApproverAvailability(
+        delegateApprover.id,
+        request.startDate,
+        request.endDate,
+      );
+
+      if (!isDelegateAvailable) {
+        this.logger.warn(
+          `Delegate approver ${delegateApprover.fullName} is not available for request ${request.id}`,
+        );
+        continue;
+      }
+
+      // Update the request with the delegate approver
+      const originalApproverId = request.approverId;
+      request.delegateApproverId = delegateApprover.id;
+      
+      await this.leaveRequestRepository.save(request);
+
+      this.logger.log(
+        `Escalated request ${request.id} from approver ${originalApproverId} to delegate ${delegateApprover.id} (${delegateApprover.fullName})`,
+      );
+
+      escalatedCount++;
+    }
+
+    this.logger.log(`Escalation complete: ${escalatedCount} requests escalated`);
+    return escalatedCount;
   }
 }

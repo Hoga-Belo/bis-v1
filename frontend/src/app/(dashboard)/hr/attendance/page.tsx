@@ -20,7 +20,8 @@ export default function MyAttendancePage() {
   const [statistics, setStatistics] = useState<AttendanceStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   // Fetch attendance data
   useEffect(() => {
@@ -29,22 +30,29 @@ export default function MyAttendancePage() {
       setError(null);
       try {
         // Get current month's date range
-        const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-        const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+        const startDate = new Date(currentYear, currentMonth, 1);
+        const endDate = new Date(currentYear, currentMonth + 1, 0);
 
-        const [attendanceData, statsData] = await Promise.all([
+        const [attendanceResponse, statsResponse] = await Promise.all([
           attendanceApi.getMyAttendance({
             startDate: startDate.toISOString().split('T')[0],
             endDate: endDate.toISOString().split('T')[0],
           }),
-          attendanceApi.getMyStatistics({
-            startDate: startDate.toISOString().split('T')[0],
-            endDate: endDate.toISOString().split('T')[0],
-          }),
+          attendanceApi.getMyStatistics(currentMonth + 1, currentYear), // API expects 1-12 for month
         ]);
 
-        setAttendanceRecords(attendanceData.data || []);
-        setStatistics(statsData);
+        // Extract data from paginated response
+        const attendanceData = attendanceResponse.data;
+        if (attendanceData && 'data' in attendanceData) {
+          setAttendanceRecords(attendanceData.data || []);
+        } else {
+          setAttendanceRecords([]);
+        }
+
+        // Extract statistics from response
+        if (statsResponse.data) {
+          setStatistics(statsResponse.data);
+        }
       } catch (err) {
         console.error('Error fetching attendance data:', err);
         setError('Gagal memuat data kehadiran');
@@ -54,19 +62,20 @@ export default function MyAttendancePage() {
     };
 
     fetchData();
-  }, [currentMonth]);
+  }, [currentMonth, currentYear]);
 
-  const handleMonthChange = (date: Date) => {
-    setCurrentMonth(date);
+  const handleMonthChange = (month: number, year: number) => {
+    setCurrentMonth(month);
+    setCurrentYear(year);
   };
 
   const handleRefresh = () => {
-    // Trigger re-fetch by updating the month state
-    setCurrentMonth(new Date(currentMonth));
+    // Trigger re-fetch by updating the state
+    setCurrentMonth(currentMonth);
   };
 
   return (
-    <PermissionGate permission="hr:attendance:read">
+    <PermissionGate permissions={['hr:attendance:read']}>
       <div className="space-y-6">
         {/* Page Header */}
         <div className="flex items-center gap-3">
@@ -135,15 +144,15 @@ export default function MyAttendancePage() {
                   <AttendanceTable
                     data={attendanceRecords}
                     showEmployee={false}
-                    showActions={false}
                   />
                 )}
               </TabsContent>
 
               <TabsContent value="calendar" className="mt-6">
                 <AttendanceCalendar
-                  attendanceRecords={attendanceRecords}
-                  currentMonth={currentMonth}
+                  data={attendanceRecords}
+                  month={currentMonth}
+                  year={currentYear}
                   onMonthChange={handleMonthChange}
                 />
               </TabsContent>

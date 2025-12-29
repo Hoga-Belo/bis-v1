@@ -7,3 +7,4 @@ export * from './work-locations';
 export * from './organization';
 export * from './employees';
 export * from './attendance';
+export * from './leave-requests';

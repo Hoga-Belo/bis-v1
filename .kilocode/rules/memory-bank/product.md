@@ -291,6 +291,204 @@ Bebang BIS addresses the operational challenges of PT Prima Sarana Gemilang (Sit
 - **Audit Trail**: All imported employees logged with CREATE action
 - **Permission Required**: `hr:employee:create` for template download and import
 
+### HR Module (Attendance Tracking - Implemented)
+
+#### Clock-In/Out System
+- **Clock-In Methods**:
+  - **LOCATION**: Clock-in with geolocation capture (latitude, longitude)
+  - **QR**: Clock-in via QR code scan (stores QR code value)
+  - **MANUAL**: Manual clock-in by HR staff
+- **Clock-In Features**:
+  - Optional geolocation capture for LOCATION method
+  - QR code validation for QR method
+  - Automatic late detection (08:00 threshold in Asia/Jakarta timezone)
+  - Prevents duplicate clock-in for same day
+  - Stores clock-in method for audit purposes
+- **Clock-Out Features**:
+  - Optional geolocation capture for verification
+  - Automatic work hours calculation (clock-out - clock-in, rounded to 2 decimals)
+  - Prevents clock-out without prior clock-in
+
+#### Attendance Status Types
+- **Present**: On-time attendance (clock-in before 08:00)
+- **Late**: Late arrival (clock-in at or after 08:00)
+- **Absent**: No attendance record for workday
+- **Leave**: On approved leave (auto-created when leave approved)
+- **Sick**: On sick leave (auto-created when sick leave approved)
+- **Permit**: On permit/izin (auto-created when permit approved)
+
+#### Today's Attendance Response
+- **Real-time Status Check**:
+  - `attendance`: Current day's attendance record (or null if not clocked in)
+  - `canClockIn`: Boolean indicating if user can clock in (no record for today)
+  - `canClockOut`: Boolean indicating if user can clock out (clocked in but not out)
+- **Used by Clock-In/Out Card**: Determines which button to show
+
+#### Attendance Calendar View
+- Monthly calendar with color-coded days
+- Visual indicators for each status type:
+  - Green: Present
+  - Yellow: Late
+  - Red: Absent
+  - Blue: Leave
+  - Purple: Sick
+  - Cyan: Permit
+- Quick navigation between months
+- Click on day to view details
+
+#### Attendance Statistics
+- **Monthly Statistics**:
+  - Present days count
+  - Late days count
+  - Absent days count
+  - Leave days count
+  - Sick days count
+  - Permit days count
+- **Work Hours Summary**: Total hours worked in period
+- **Attendance Rate**: Percentage of on-time attendance
+
+#### HR Attendance Management
+- View all employee attendance records
+- Filter by:
+  - Date range (start date, end date)
+  - Employee (search by name or NIK)
+  - Status (present, late, absent, leave, sick, permit)
+- Update attendance status with notes
+- View individual employee attendance history
+- Export attendance reports
+
+#### Permissions
+- `hr:attendance:create` - Clock in/out for self
+- `hr:attendance:read` - View attendance records
+- `hr:attendance:update` - Update attendance status (HR management)
+
+### HR Module (Leave Management - Implemented)
+
+#### Leave Request Submission
+- **Leave Types** (9 types):
+  - **ANNUAL**: Cuti Tahunan (Annual Leave)
+  - **SICK**: Cuti Sakit (Sick Leave)
+  - **MATERNITY**: Cuti Melahirkan (Maternity Leave)
+  - **PATERNITY**: Cuti Ayah (Paternity Leave)
+  - **MARRIAGE**: Cuti Menikah (Marriage Leave)
+  - **BEREAVEMENT**: Cuti Duka (Bereavement Leave)
+  - **UNPAID**: Cuti Tanpa Gaji (Unpaid Leave)
+  - **PERMIT**: Izin (Permit/Permission)
+  - **OTHER**: Lainnya (Other)
+- **Request Fields**:
+  - Leave type selection
+  - Start date and end date
+  - Reason/notes for the request
+  - Optional attachment URL (for medical certificates, etc.)
+- **Validation**:
+  - Cannot request leave for past dates
+  - End date must be after or equal to start date
+  - Sufficient leave balance required (for ANNUAL and SICK)
+  - No overlapping leave requests
+
+#### Leave Balance Tracking
+- **Annual Leave**: 12 days per year (default allocation)
+- **Sick Leave**: 12 days per year (default allocation)
+- **Balance Display**:
+  - Total allocated days
+  - Used days
+  - Remaining days
+- **Automatic Deduction**: Balance reduced upon approval
+- **Balance Restoration**: Balance restored if request cancelled
+- **Balance Response Shape**:
+  ```
+  {
+    annualLeave: { total, used, remaining },
+    sickLeave: { total, used, remaining }
+  }
+  ```
+
+#### Approval Workflow
+- **Automatic Approver Detection**:
+  - System detects approver from employee's manager hierarchy
+  - Uses `managerId` field from employee record
+  - `detectApprover(employeeId)` method in ApprovalService
+- **Approver Availability Check**:
+  - System checks if approver is on approved leave
+  - Queries leave_requests table for overlapping approved leaves
+  - `checkApproverAvailability(approverId, startDate, endDate)` method
+- **Delegate Escalation**:
+  - If approver is on leave, system finds delegate
+  - Delegate is the approver's manager (skip-level manager)
+  - `findDelegateApprover(approverId)` method
+  - `findAvailableApprover(employeeId, startDate, endDate)` returns `{ approver, isDelegate }`
+- **Automatic Escalation (SLA)**:
+  - Pending requests older than 3 days are automatically escalated
+  - Cron job runs daily at midnight: `@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)`
+  - `escalatePendingApprovals(slaDays)` method escalates to delegate approvers
+  - Logs escalation count for monitoring
+- **Approval Actions**:
+  - Approve with optional notes
+  - Reject with required reason
+- **Status Flow**: Pending → Approved/Rejected/Cancelled
+- **Attendance Record Creation**:
+  - On approval, attendance records are automatically created for leave dates
+  - Status set to LEAVE, SICK, or PERMIT based on leave type
+
+#### Working Days Calculation
+- Excludes weekends (Saturday = 6, Sunday = 0) from leave duration
+- Example: Monday to Friday = 5 working days
+- Example: Friday to Monday = 2 working days (excludes Sat/Sun)
+- Used for `totalDays` field in leave request
+
+#### Leave Calendar View
+- Monthly calendar showing all leave requests
+- Color-coded by status:
+  - Yellow: Pending approval
+  - Green: Approved
+  - Red: Rejected
+  - Gray: Cancelled
+- Team view for managers to see team availability
+
+#### Leave Statistics (Flattened Response)
+- **Response Shape**:
+  ```
+  {
+    year: number,
+    totalRequests: number,
+    pendingRequests: number,
+    approvedRequests: number,
+    rejectedRequests: number,
+    cancelledRequests: number,
+    totalAnnualDaysTaken: number,
+    totalSickDaysTaken: number,
+    totalOtherDaysTaken: number
+  }
+  ```
+- **Personal Statistics**:
+  - Total requests submitted
+  - Approved requests count
+  - Rejected requests count
+  - Pending requests count
+  - Cancelled requests count
+- **Usage by Type**:
+  - Annual leave days used
+  - Sick leave days used
+  - Other leave days used
+
+#### Pending Approvals (For Managers)
+- List of pending leave requests requiring action
+- Quick approve/reject actions
+- View request details before decision
+- Filter by employee or date range
+- Shows delegate indicator if request was escalated
+
+#### Self-Service Features
+- View own leave history
+- Cancel pending requests
+- Check leave balance
+- Track request status
+
+#### Permissions
+- `hr:leave:create` - Submit leave request
+- `hr:leave:read` - View leave requests
+- `hr:leave:approve` - Approve/reject leave requests (managers)
+
 ### User Management
 - Create, read, update, delete users
 - Assign multiple roles to users

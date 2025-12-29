@@ -40,8 +40,6 @@ const statusOptions: Array<{ value: AttendanceStatus; label: string; className: 
   { value: AttendanceStatus.LEAVE, label: 'Cuti', className: 'bg-blue-100 text-blue-800' },
   { value: AttendanceStatus.SICK, label: 'Sakit', className: 'bg-purple-100 text-purple-800' },
   { value: AttendanceStatus.PERMIT, label: 'Izin', className: 'bg-orange-100 text-orange-800' },
-  { value: AttendanceStatus.HOLIDAY, label: 'Libur', className: 'bg-gray-100 text-gray-800' },
-  { value: AttendanceStatus.WEEKEND, label: 'Akhir Pekan', className: 'bg-gray-100 text-gray-800' },
 ];
 
 export function UpdateStatusDialog({

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, DataSource } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { LeaveRequest, LeaveStatus, LeaveType } from '../../../entities/hr/leave-request.entity';
 import { Employee } from '../../../entities/hr/employee.entity';
 import { Attendance, AttendanceStatus } from '../../../entities/hr/attendance.entity';
@@ -453,10 +454,13 @@ export class LeaveRequestsService {
   ): Promise<{
     year: number;
     totalRequests: number;
-    statusCounts: Record<LeaveStatus, number>;
-    leaveTypeDays: Record<LeaveType, number>;
-    pendingDays: number;
-    approvedDays: number;
+    pendingRequests: number;
+    approvedRequests: number;
+    rejectedRequests: number;
+    cancelledRequests: number;
+    totalAnnualDaysTaken: number;
+    totalSickDaysTaken: number;
+    totalOtherDaysTaken: number;
   }> {
     // Validate employee exists
     await this.validateEmployee(employeeId);
@@ -470,49 +474,74 @@ export class LeaveRequestsService {
       .getMany();
 
     // Initialize counters
-    const statusCounts: Record<LeaveStatus, number> = {
-      [LeaveStatus.PENDING]: 0,
-      [LeaveStatus.APPROVED]: 0,
-      [LeaveStatus.REJECTED]: 0,
-      [LeaveStatus.CANCELLED]: 0,
-    };
-
-    const leaveTypeDays: Record<LeaveType, number> = {
-      [LeaveType.ANNUAL]: 0,
-      [LeaveType.SICK]: 0,
-      [LeaveType.MATERNITY]: 0,
-      [LeaveType.PATERNITY]: 0,
-      [LeaveType.UNPAID]: 0,
-      [LeaveType.PERMIT]: 0,
-    };
-
-    let pendingDays = 0;
-    let approvedDays = 0;
+    let pendingRequests = 0;
+    let approvedRequests = 0;
+    let rejectedRequests = 0;
+    let cancelledRequests = 0;
+    let totalAnnualDaysTaken = 0;
+    let totalSickDaysTaken = 0;
+    let totalOtherDaysTaken = 0;
 
     // Calculate statistics
     for (const request of leaveRequests) {
       // Count by status
-      statusCounts[request.status]++;
+      switch (request.status) {
+        case LeaveStatus.PENDING:
+          pendingRequests++;
+          break;
+        case LeaveStatus.APPROVED:
+          approvedRequests++;
+          break;
+        case LeaveStatus.REJECTED:
+          rejectedRequests++;
+          break;
+        case LeaveStatus.CANCELLED:
+          cancelledRequests++;
+          break;
+      }
 
       // Sum days by leave type (only for approved requests)
       if (request.status === LeaveStatus.APPROVED) {
-        leaveTypeDays[request.leaveType] += request.totalDays;
-        approvedDays += request.totalDays;
-      }
-
-      // Sum pending days
-      if (request.status === LeaveStatus.PENDING) {
-        pendingDays += request.totalDays;
+        switch (request.leaveType) {
+          case LeaveType.ANNUAL:
+            totalAnnualDaysTaken += request.totalDays;
+            break;
+          case LeaveType.SICK:
+            totalSickDaysTaken += request.totalDays;
+            break;
+          default:
+            totalOtherDaysTaken += request.totalDays;
+            break;
+        }
       }
     }
 
     return {
       year,
       totalRequests: leaveRequests.length,
-      statusCounts,
-      leaveTypeDays,
-      pendingDays,
-      approvedDays,
+      pendingRequests,
+      approvedRequests,
+      rejectedRequests,
+      cancelledRequests,
+      totalAnnualDaysTaken,
+      totalSickDaysTaken,
+      totalOtherDaysTaken,
     };
+  }
+
+  /**
+   * Cron job to escalate pending leave requests that have exceeded the SLA
+   * Runs daily at midnight (00:00)
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleEscalation(): Promise<void> {
+    this.logger.log('Running scheduled escalation check for pending leave requests');
+    
+    try {
+      const escalatedCount = await this.approvalService.escalatePendingApprovals(3);
+      this.logger.log(`Scheduled escalation completed: ${escalatedCount} requests escalated`);
+    } catch (error) {
+      this.logger.error('Error during scheduled escalation:', error);
+    }
   }
 }

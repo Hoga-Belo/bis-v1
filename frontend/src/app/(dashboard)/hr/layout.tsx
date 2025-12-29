@@ -13,6 +13,10 @@ import {
   FileCheck,
   MapPin,
   Network,
+  Clock,
+  ClipboardList,
+  Calendar,
+  CheckCircle,
 } from 'lucide-react';
 
 const hrNavItems = [
@@ -21,6 +25,30 @@ const hrNavItems = [
     label: 'Karyawan',
     icon: UsersRound,
     permission: 'hr:employee:read',
+  },
+  {
+    href: '/hr/attendance',
+    label: 'Kehadiran',
+    icon: Clock,
+    permission: 'hr:attendance:read',
+  },
+  {
+    href: '/hr/attendance/all',
+    label: 'Manajemen Kehadiran',
+    icon: ClipboardList,
+    permission: 'hr:attendance:read',
+  },
+  {
+    href: '/hr/leave-requests',
+    label: 'Pengajuan Cuti',
+    icon: Calendar,
+    permission: 'hr:leave:read',
+  },
+  {
+    href: '/hr/leave-requests/approvals',
+    label: 'Persetujuan Cuti',
+    icon: CheckCircle,
+    permission: 'hr:leave:approve',
   },
   {
     href: '/hr/divisions',

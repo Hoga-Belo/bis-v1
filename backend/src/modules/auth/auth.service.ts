@@ -20,6 +20,7 @@ const logger = new Logger('AuthService');
 export interface AuthenticatedUser {
   id: string;
   nik: string;
+  employeeId: string | null;
   roles: string[];
   permissions: string[];
   isFirstLogin: boolean;
@@ -175,6 +176,7 @@ export class AuthService {
         user: {
           id: user.id,
           nik: user.nik,
+          employeeId: user.employeeId,
           roles,
           permissions,
           isFirstLogin: user.isFirstLogin,
@@ -224,6 +226,7 @@ export class AuthService {
     return {
       id: user.id,
       nik: user.nik,
+      employeeId: user.employeeId,
       roles,
       permissions,
       isFirstLogin: user.isFirstLogin,

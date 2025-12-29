@@ -54,4 +54,7 @@ export class Attendance extends BaseEntity {
 
   @Column({ type: 'text', nullable: true })
   notes: string | null;
+
+  @Column({ name: 'qr_code', type: 'varchar', length: 255, nullable: true })
+  qrCode: string | null;
 }

@@ -41,6 +41,19 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/modules/` | NestJS feature modules |
 | `src/modules/hr/` | HR module (master data, employees, attendance, leave) |
 | `src/modules/hr/hr.module.ts` | Main HR module aggregating all sub-modules |
+| `src/modules/hr/attendance/` | Attendance module (clock-in/out, statistics, HR management) |
+| `src/modules/hr/attendance/attendance.module.ts` | Attendance module definition with TypeORM entity registration |
+| `src/modules/hr/attendance/attendance.service.ts` | Attendance business logic (clock-in/out, statistics, HR management) |
+| `src/modules/hr/attendance/attendance.controller.ts` | Attendance REST endpoints with Swagger documentation |
+| `src/modules/hr/attendance/dto/` | Attendance DTOs (ClockInDto, ClockOutDto, AttendanceQueryDto, UpdateAttendanceStatusDto) |
+| `src/modules/hr/approval/` | Approval workflow service (reusable for leave and other modules) |
+| `src/modules/hr/approval/approval.module.ts` | Approval module definition |
+| `src/modules/hr/approval/approval.service.ts` | Approver detection, availability check, delegation logic |
+| `src/modules/hr/leave-requests/` | Leave requests module (submit, approve, reject, cancel, balance) |
+| `src/modules/hr/leave-requests/leave-requests.module.ts` | Leave requests module definition with ApprovalModule import |
+| `src/modules/hr/leave-requests/leave-requests.service.ts` | Leave requests business logic (submit, approve, reject, cancel, balance) |
+| `src/modules/hr/leave-requests/leave-requests.controller.ts` | Leave requests REST endpoints with Swagger documentation |
+| `src/modules/hr/leave-requests/dto/` | Leave DTOs (CreateLeaveRequestDto, ApproveLeaveDto, RejectLeaveDto, LeaveRequestQueryDto) |
 | `src/modules/hr/divisions/` | Division management (CRUD) |
 | `src/modules/hr/departments/` | Department management (CRUD with division relationship) |
 | `src/modules/hr/positions/` | Position management (CRUD) |
@@ -165,6 +178,34 @@ Bebang BIS follows a Modular Monolith architecture with clear separation between
 | `src/lib/types/api.ts` | API response types |
 | `src/lib/types/audit.ts` | Audit types (AuditLog, AuditAction, AuditQueryParams) |
 | `src/lib/types/hr.ts` | HR types (Division, Department, Position, JobGrade, Employee, EmployeeFamily, EmployeeEducation, EmployeeDocument, etc.) |
+| `src/lib/types/attendance.ts` | Attendance types (Attendance, AttendanceStatus, AttendanceStatistics, ClockInRequest, ClockOutRequest) |
+| `src/lib/types/leave.ts` | Leave types (LeaveRequest, LeaveType, LeaveStatus, LeaveBalance, LeaveStatistics) |
+| `src/lib/api/endpoints/attendance.ts` | Attendance API client (clockIn, clockOut, getToday, getMy, getStatistics, getAll, updateStatus) |
+| `src/lib/api/endpoints/leave.ts` | Leave requests API client (create, getMy, getPending, approve, reject, cancel, getBalance) |
+| `src/components/hr/attendance/` | Attendance components |
+| `src/components/hr/attendance/clock-in-out-card.tsx` | Clock in/out card with geolocation capture |
+| `src/components/hr/attendance/attendance-table.tsx` | Attendance data table with status badges |
+| `src/components/hr/attendance/attendance-calendar.tsx` | Monthly attendance calendar with color-coded days |
+| `src/components/hr/attendance/attendance-stats-card.tsx` | Attendance statistics display |
+| `src/components/hr/attendance/update-status-dialog.tsx` | HR dialog for status updates |
+| `src/components/hr/leave-requests/` | Leave request components |
+| `src/components/hr/leave-requests/leave-balance-card.tsx` | Leave balance display |
+| `src/components/hr/leave-requests/leave-request-form.tsx` | Leave request submission form |
+| `src/components/hr/leave-requests/leave-request-table.tsx` | Leave requests data table |
+| `src/components/hr/leave-requests/leave-request-detail-card.tsx` | Request detail view |
+| `src/components/hr/leave-requests/approval-action-card.tsx` | Approve/reject actions for approvers |
+| `src/components/hr/leave-requests/pending-approvals-card.tsx` | Pending approvals list |
+| `src/components/hr/leave-requests/leave-statistics-card.tsx` | Leave usage statistics |
+| `src/components/hr/leave-requests/leave-calendar.tsx` | Leave calendar view |
+| `src/app/(dashboard)/hr/attendance/` | Attendance pages |
+| `src/app/(dashboard)/hr/attendance/page.tsx` | My attendance page with clock-in/out, calendar, stats |
+| `src/app/(dashboard)/hr/attendance/all/page.tsx` | HR attendance management with filters |
+| `src/app/(dashboard)/hr/attendance/employee/[id]/page.tsx` | Individual employee attendance detail |
+| `src/app/(dashboard)/hr/leave-requests/` | Leave request pages |
+| `src/app/(dashboard)/hr/leave-requests/page.tsx` | My leave requests with balance and history |
+| `src/app/(dashboard)/hr/leave-requests/create/page.tsx` | Submit new leave request |
+| `src/app/(dashboard)/hr/leave-requests/[id]/page.tsx` | Leave request detail with approval actions |
+| `src/app/(dashboard)/hr/leave-requests/approvals/page.tsx` | Pending approvals for managers |
 
 ## Key Technical Decisions
 
@@ -413,6 +454,12 @@ Examples:
 - hr:employee:read:payroll   - View employee payroll data (field-level permission)
 - hr:employee:create:payroll - Create employee payroll data (field-level permission)
 - hr:employee:update:payroll - Update employee payroll data (field-level permission)
+- hr:attendance:create       - Clock in/out
+- hr:attendance:read         - View attendance records
+- hr:attendance:update       - Update attendance status (HR)
+- hr:leave:create            - Submit leave request
+- hr:leave:read              - View leave requests
+- hr:leave:approve           - Approve/reject leave requests
 - inventory:product:create   - Create products
 - audit:log:read             - View audit logs
 ```
@@ -515,6 +562,266 @@ Examples:
 | `/hr/employees/:id/education` | POST | `hr:employee:update` | Add employee education record |
 | `/hr/employees/:id/education/:eduId` | PATCH | `hr:employee:update` | Update employee education record |
 | `/hr/employees/:id/education/:eduId` | DELETE | `hr:employee:update` | Delete employee education record |
+
+### Attendance Module API Endpoints
+
+| Endpoint | Method | Permission | Description |
+|----------|--------|------------|-------------|
+| `/hr/attendance/clock-in` | POST | `hr:attendance:create` | Clock in for the day with method (LOCATION/QR), optional geolocation, optional qrCode |
+| `/hr/attendance/clock-out` | POST | `hr:attendance:create` | Clock out for the day with optional geolocation |
+| `/hr/attendance/me/today` | GET | `hr:attendance:read` | Get today's attendance for current user (returns TodayAttendanceResponse) |
+| `/hr/attendance/me` | GET | `hr:attendance:read` | Get my attendance history with pagination |
+| `/hr/attendance/statistics` | GET | `hr:attendance:read` | Get my monthly attendance statistics |
+| `/hr/attendance/statistics/:employeeId` | GET | `hr:attendance:read` | Get specific employee's monthly statistics |
+| `/hr/attendance` | GET | `hr:attendance:read` | List all attendance records (HR management) |
+| `/hr/attendance/employee/:id` | GET | `hr:attendance:read` | Get specific employee's attendance history |
+| `/hr/attendance/:id/status` | PATCH | `hr:attendance:update` | Update attendance status (HR management) |
+
+### Attendance Field Mapping (Entity → Frontend)
+
+The backend uses `mapAttendance()` function to transform entity fields to frontend-friendly names:
+
+```typescript
+// Entity fields → Frontend fields
+attendanceDate → date (YYYY-MM-DD string)
+clockInTime → clockIn (ISO timestamp string or null)
+clockOutTime → clockOut (ISO timestamp string or null)
+
+// MappedAttendance interface
+interface MappedAttendance {
+  id: string;
+  employeeId: string;
+  date: string;           // YYYY-MM-DD format
+  clockIn: string | null; // ISO timestamp
+  clockOut: string | null; // ISO timestamp
+  status: AttendanceStatus;
+  workHours: number | null;
+  clockInLocation: { lat: number; lng: number; address?: string } | null;
+  clockOutLocation: { lat: number; lng: number; address?: string } | null;
+  clockInMethod: ClockInMethod;
+  notes: string | null;
+  qrCode: string | null;
+  employee?: Employee; // Optional, included when requested
+}
+```
+
+### TodayAttendance Response Shape
+
+```typescript
+// GET /hr/attendance/me/today response
+interface TodayAttendanceResponse {
+  attendance: MappedAttendance | null;  // null if not clocked in today
+  canClockIn: boolean;   // true if no clock-in record for today
+  canClockOut: boolean;  // true if clocked in but not clocked out
+}
+```
+
+### ClockInMethod Enum
+
+```typescript
+// backend/src/entities/hr/attendance.entity.ts
+export enum ClockInMethod {
+  QR = 'QR',           // Clock-in via QR code scan
+  MANUAL = 'MANUAL',   // Manual clock-in by HR
+  LOCATION = 'LOCATION' // Clock-in with geolocation
+}
+```
+
+### Clock-In Request DTOs
+
+```typescript
+// ClockInDto - supports both LOCATION and QR methods
+interface ClockInDto {
+  method: ClockInMethod;  // Required: LOCATION or QR
+  latitude?: number;      // Optional: for LOCATION method
+  longitude?: number;     // Optional: for LOCATION method
+  qrCode?: string;        // Optional: for QR method
+}
+
+// ClockOutDto
+interface ClockOutDto {
+  latitude?: number;      // Optional geolocation
+  longitude?: number;     // Optional geolocation
+}
+```
+
+### Late Detection Logic
+
+```typescript
+// In attendance.service.ts - Asia/Jakarta timezone (UTC+7)
+const LATE_THRESHOLD_HOUR = 8; // 08:00 local time
+
+// Check if clock-in is late
+const clockInTime = new Date();
+const jakartaTime = new Date(clockInTime.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+const isLate = jakartaTime.getHours() >= LATE_THRESHOLD_HOUR;
+const status = isLate ? AttendanceStatus.LATE : AttendanceStatus.PRESENT;
+```
+
+### Leave Requests Module API Endpoints
+
+| Endpoint | Method | Permission | Description |
+|----------|--------|------------|-------------|
+| `/hr/leave-requests` | POST | `hr:leave:create` | Submit new leave request |
+| `/hr/leave-requests/my` | GET | `hr:leave:read` | Get my leave requests with pagination |
+| `/hr/leave-requests/pending` | GET | `hr:leave:approve` | Get pending approvals for current user |
+| `/hr/leave-requests/balance` | GET | `hr:leave:read` | Get my leave balance (annual, sick) |
+| `/hr/leave-requests/statistics` | GET | `hr:leave:read` | Get my leave usage statistics (flattened response) |
+| `/hr/leave-requests/:id` | GET | `hr:leave:read` | Get leave request detail |
+| `/hr/leave-requests/:id/approve` | POST | `hr:leave:approve` | Approve leave request |
+| `/hr/leave-requests/:id/reject` | POST | `hr:leave:approve` | Reject leave request with reason |
+| `/hr/leave-requests/:id/cancel` | POST | `hr:leave:create` | Cancel own pending leave request |
+
+### Leave Statistics Response Shape (Flattened)
+
+```typescript
+// GET /hr/leave-requests/statistics response
+interface LeaveStatistics {
+  year: number;
+  totalRequests: number;
+  pendingRequests: number;
+  approvedRequests: number;
+  rejectedRequests: number;
+  cancelledRequests: number;
+  totalAnnualDaysTaken: number;
+  totalSickDaysTaken: number;
+  totalOtherDaysTaken: number;
+}
+```
+
+### Leave Balance Response Shape
+
+```typescript
+// GET /hr/leave-requests/balance response
+interface LeaveBalance {
+  annualLeave: {
+    total: number;      // Default: 12 days per year
+    used: number;
+    remaining: number;
+  };
+  sickLeave: {
+    total: number;      // Default: 12 days per year
+    used: number;
+    remaining: number;
+  };
+}
+```
+
+### Leave Type Enum
+
+```typescript
+// backend/src/entities/hr/leave-request.entity.ts
+export enum LeaveType {
+  ANNUAL = 'ANNUAL',           // Cuti Tahunan
+  SICK = 'SICK',               // Cuti Sakit
+  MATERNITY = 'MATERNITY',     // Cuti Melahirkan
+  PATERNITY = 'PATERNITY',     // Cuti Ayah
+  MARRIAGE = 'MARRIAGE',       // Cuti Menikah
+  BEREAVEMENT = 'BEREAVEMENT', // Cuti Duka
+  UNPAID = 'UNPAID',           // Cuti Tanpa Gaji
+  PERMIT = 'PERMIT',           // Izin
+  OTHER = 'OTHER',             // Lainnya
+}
+```
+
+### Leave Status Enum
+
+```typescript
+export enum LeaveStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  CANCELLED = 'CANCELLED',
+}
+```
+
+### Working Days Calculation
+
+```typescript
+// Excludes weekends (Saturday = 6, Sunday = 0)
+function calculateWorkingDays(startDate: Date, endDate: Date): number {
+  let count = 0;
+  const current = new Date(startDate);
+  
+  while (current <= endDate) {
+    const dayOfWeek = current.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      count++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  
+  return count;
+}
+```
+
+### Approval Workflow Flow
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Employee  │────▶│   Detect    │────▶│   Check     │
+│   Submits   │     │   Approver  │     │   Available │
+└─────────────┘     └─────────────┘     └─────────────┘
+                                              │
+                    ┌─────────────────────────┘
+                    ▼
+              ┌─────────────┐
+              │  Approver   │
+              │  On Leave?  │
+              └─────────────┘
+                    │
+         ┌──────────┴──────────┐
+         ▼                     ▼
+   ┌───────────┐         ┌───────────┐
+   │    NO     │         │    YES    │
+   │  Assign   │         │  Find     │
+   │  Direct   │         │  Delegate │
+   └───────────┘         └───────────┘
+```
+
+**Approval Workflow Process:**
+1. Employee submits leave request
+2. System detects approver from employee's manager hierarchy
+3. System checks if approver is available (not on approved leave)
+4. If approver is on leave, system finds delegate (approver's manager)
+5. Request is assigned to available approver
+6. Approver can approve or reject with notes/reason
+7. Employee is notified of decision
+8. Leave balance is updated on approval
+
+**Approval Service Methods:**
+```typescript
+// Detect approver from employee's manager hierarchy
+async detectApprover(employeeId: string): Promise<Employee | null>
+
+// Check if approver has overlapping approved leave
+async checkApproverAvailability(approverId: string, startDate: Date, endDate: Date): Promise<boolean>
+
+// Get skip-level manager (approver's manager)
+async findDelegateApprover(approverId: string): Promise<Employee | null>
+
+// Get effective approver with automatic delegation - returns { approver, isDelegate }
+async findAvailableApprover(employeeId: string, startDate: Date, endDate: Date): Promise<{ approver: Employee | null; isDelegate: boolean }>
+
+// Build full approval chain up to top management
+async getApprovalChain(employeeId: string): Promise<Employee[]>
+
+// Get detailed approver info with availability status
+async getApproverInfo(employeeId: string, startDate: Date, endDate: Date): Promise<ApproverInfo>
+
+// Escalate old pending requests to delegate approvers (called by cron job)
+async escalatePendingApprovals(slaDays: number): Promise<number>
+```
+
+**Automatic Escalation Cron Job:**
+```typescript
+// In leave-requests.service.ts
+@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+async handleEscalation(): Promise<void> {
+  const escalatedCount = await this.approvalService.escalatePendingApprovals(3);
+  this.logger.log(`Escalated ${escalatedCount} pending leave requests`);
+}
+```
 
 ### Excel Import API Endpoints
 
@@ -784,19 +1091,43 @@ backend/src/modules/hr/
 │   ├── organization.module.ts
 │   ├── organization.controller.ts
 │   └── organization.service.ts
-└── employees/                      # Employee management
-    ├── employees.module.ts         # Module with Multer config
-    ├── employees.controller.ts     # 21+ endpoints with Swagger docs (includes import)
-    ├── employees.service.ts        # CRUD, file uploads, statistics
-    ├── excel-template.service.ts   # Excel template generation with 4 sheets
-    ├── excel-import.service.ts     # Excel import with validation and transaction
+├── employees/                      # Employee management
+│   ├── employees.module.ts         # Module with Multer config
+│   ├── employees.controller.ts     # 21+ endpoints with Swagger docs (includes import)
+│   ├── employees.service.ts        # CRUD, file uploads, statistics
+│   ├── excel-template.service.ts   # Excel template generation with 4 sheets
+│   ├── excel-import.service.ts     # Excel import with validation and transaction
+│   └── dto/
+│       ├── create-employee.dto.ts
+│       ├── update-employee.dto.ts
+│       ├── employee-query.dto.ts
+│       ├── create-employee-family.dto.ts
+│       ├── create-employee-education.dto.ts
+│       ├── import-employee.dto.ts  # Import DTOs (row, error, result)
+│       └── index.ts
+├── attendance/                     # Attendance management
+│   ├── attendance.module.ts        # Module with TypeORM entity registration
+│   ├── attendance.controller.ts    # REST endpoints with Swagger docs
+│   ├── attendance.service.ts       # Clock-in/out, statistics, HR management
+│   └── dto/
+│       ├── clock-in.dto.ts         # Clock-in with optional geolocation
+│       ├── clock-out.dto.ts        # Clock-out with optional geolocation
+│       ├── attendance-query.dto.ts # Query params for filtering
+│       ├── update-attendance-status.dto.ts  # HR status update
+│       └── index.ts
+├── approval/                       # Approval workflow (reusable)
+│   ├── approval.module.ts          # Module definition
+│   ├── approval.service.ts         # Approver detection, availability, delegation
+│   └── index.ts
+└── leave-requests/                 # Leave requests management
+    ├── leave-requests.module.ts    # Module with ApprovalModule import
+    ├── leave-requests.controller.ts # REST endpoints with Swagger docs
+    ├── leave-requests.service.ts   # Submit, approve, reject, cancel, balance
     └── dto/
-        ├── create-employee.dto.ts
-        ├── update-employee.dto.ts
-        ├── employee-query.dto.ts
-        ├── create-employee-family.dto.ts
-        ├── create-employee-education.dto.ts
-        ├── import-employee.dto.ts  # Import DTOs (row, error, result)
+        ├── create-leave-request.dto.ts  # Submit leave request
+        ├── approve-leave.dto.ts    # Approve with optional notes
+        ├── reject-leave.dto.ts     # Reject with required reason
+        ├── leave-request-query.dto.ts  # Query params for filtering
         └── index.ts
 ```
 
@@ -831,13 +1162,23 @@ frontend/src/app/(dashboard)/hr/
 │   └── [id]/page.tsx
 ├── organization/                   # Organization chart
 │   └── page.tsx
-└── employees/                      # Employee pages
-    ├── page.tsx                    # List with search, filter, pagination, import button
-    ├── create/page.tsx             # Multi-section create form
-    ├── import/page.tsx             # Excel import page with drag & drop
-    └── [id]/
-        ├── page.tsx                # Detail with 6 tabs
-        └── edit/page.tsx           # Edit with pre-populated data
+├── employees/                      # Employee pages
+│   ├── page.tsx                    # List with search, filter, pagination, import button
+│   ├── create/page.tsx             # Multi-section create form
+│   ├── import/page.tsx             # Excel import page with drag & drop
+│   └── [id]/
+│       ├── page.tsx                # Detail with 6 tabs
+│       └── edit/page.tsx           # Edit with pre-populated data
+├── attendance/                     # Attendance pages
+│   ├── page.tsx                    # My attendance with clock-in/out, calendar, stats
+│   ├── all/page.tsx                # HR attendance management with filters
+│   └── employee/
+│       └── [id]/page.tsx           # Individual employee attendance detail
+└── leave-requests/                 # Leave request pages
+    ├── page.tsx                    # My leave requests with balance and history
+    ├── create/page.tsx             # Submit new leave request
+    ├── approvals/page.tsx          # Pending approvals for managers
+    └── [id]/page.tsx               # Leave request detail with approval actions
 
 frontend/src/components/hr/
 ├── index.ts                        # Main exports
@@ -869,30 +1210,47 @@ frontend/src/components/hr/
 │   ├── index.ts
 │   ├── organization-tree.tsx
 │   └── department-hierarchy.tsx
-└── employees/
+├── employees/
+│   ├── index.ts                    # Main exports
+│   ├── employee-table.tsx          # Data table with actions and import button
+│   ├── employee-form.tsx           # Multi-section form
+│   ├── photo-upload.tsx            # Photo upload with preview
+│   ├── document-upload.tsx         # Document upload with drag-and-drop
+│   ├── document-list.tsx           # Document list with download/delete
+│   ├── employee-stats.tsx          # Statistics cards
+│   ├── contract-expiry-alert.tsx   # Contract expiry notifications
+│   ├── excel-import.tsx            # Excel import with drag & drop, progress, error display
+│   ├── tabs/
+│   │   ├── index.ts
+│   │   ├── personal-info-tab.tsx   # Personal information display
+│   │   ├── employment-tab.tsx      # Employment details display
+│   │   ├── family-tab.tsx          # Family records with inline CRUD
+│   │   ├── education-tab.tsx       # Education records with inline CRUD
+│   │   ├── documents-tab.tsx       # Document management
+│   │   └── payroll-tab.tsx         # Payroll data (permission-protected)
+│   └── form-sections/
+│       ├── index.ts
+│       ├── personal-info-section.tsx
+│       ├── address-section.tsx
+│       ├── employment-section.tsx
+│       └── payroll-section.tsx     # Permission-protected section
+├── attendance/                     # Attendance components
+│   ├── index.ts                    # Main exports
+│   ├── clock-in-out-card.tsx       # Clock in/out with geolocation capture
+│   ├── attendance-table.tsx        # Attendance data table with status badges
+│   ├── attendance-calendar.tsx     # Monthly calendar with color-coded days
+│   ├── attendance-stats-card.tsx   # Attendance statistics display
+│   └── update-status-dialog.tsx    # HR dialog for status updates
+└── leave-requests/                 # Leave request components
     ├── index.ts                    # Main exports
-    ├── employee-table.tsx          # Data table with actions and import button
-    ├── employee-form.tsx           # Multi-section form
-    ├── photo-upload.tsx            # Photo upload with preview
-    ├── document-upload.tsx         # Document upload with drag-and-drop
-    ├── document-list.tsx           # Document list with download/delete
-    ├── employee-stats.tsx          # Statistics cards
-    ├── contract-expiry-alert.tsx   # Contract expiry notifications
-    ├── excel-import.tsx            # Excel import with drag & drop, progress, error display
-    ├── tabs/
-    │   ├── index.ts
-    │   ├── personal-info-tab.tsx   # Personal information display
-    │   ├── employment-tab.tsx      # Employment details display
-    │   ├── family-tab.tsx          # Family records with inline CRUD
-    │   ├── education-tab.tsx       # Education records with inline CRUD
-    │   ├── documents-tab.tsx       # Document management
-    │   └── payroll-tab.tsx         # Payroll data (permission-protected)
-    └── form-sections/
-        ├── index.ts
-        ├── personal-info-section.tsx
-        ├── address-section.tsx
-        ├── employment-section.tsx
-        └── payroll-section.tsx     # Permission-protected section
+    ├── leave-balance-card.tsx      # Leave balance display
+    ├── leave-request-form.tsx      # Leave request submission form
+    ├── leave-request-table.tsx     # Leave requests data table
+    ├── leave-request-detail-card.tsx # Request detail view
+    ├── approval-action-card.tsx    # Approve/reject actions for approvers
+    ├── pending-approvals-card.tsx  # Pending approvals list
+    ├── leave-statistics-card.tsx   # Leave usage statistics
+    └── leave-calendar.tsx          # Leave calendar view
 ```
 
 ### HR Dashboard Page Structure

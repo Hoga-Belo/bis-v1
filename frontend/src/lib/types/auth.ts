@@ -1,6 +1,7 @@
 export interface User {
   id: string;
   nik: string;
+  employeeId: string | null;
   roles: string[];
   permissions: string[];
   isFirstLogin: boolean;

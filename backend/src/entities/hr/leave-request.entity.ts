@@ -7,8 +7,11 @@ export enum LeaveType {
   SICK = 'SICK',
   MATERNITY = 'MATERNITY',
   PATERNITY = 'PATERNITY',
+  MARRIAGE = 'MARRIAGE',
+  BEREAVEMENT = 'BEREAVEMENT',
   UNPAID = 'UNPAID',
   PERMIT = 'PERMIT',
+  OTHER = 'OTHER',
 }
 
 export enum LeaveStatus {

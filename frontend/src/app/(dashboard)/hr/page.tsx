@@ -14,14 +14,26 @@ import {
   ChevronRight,
   AlertTriangle,
   Clock,
+  Calendar,
+  CheckCircle,
+  ClipboardList,
+  Heart,
+  CalendarPlus,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PermissionGate } from '@/components/auth';
 import { EmployeeStats } from '@/components/hr/employees/employee-stats';
+import { ClockInOutCard } from '@/components/hr/attendance/clock-in-out-card';
+import { PendingApprovalsCard } from '@/components/hr/leave-requests/pending-approvals-card';
 import { employeesApi } from '@/lib/api/endpoints/hr';
+import { attendanceApi } from '@/lib/api/endpoints/attendance';
+import { leaveApi } from '@/lib/api/endpoints/leave';
 import { ContractExpiringEmployee } from '@/lib/types/hr';
+import type { AttendanceStatistics } from '@/lib/types/attendance';
+import type { LeaveBalance } from '@/lib/types/leave';
 
 // Quick navigation cards for HR sub-modules
 const hrModules = [
@@ -33,6 +45,24 @@ const hrModules = [
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',
     permission: 'hr:employee:read',
+  },
+  {
+    title: 'Kehadiran',
+    description: 'Kelola kehadiran karyawan',
+    icon: Clock,
+    href: '/hr/attendance',
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-100',
+    permission: 'hr:attendance:read',
+  },
+  {
+    title: 'Pengajuan Cuti',
+    description: 'Kelola pengajuan cuti',
+    icon: Calendar,
+    href: '/hr/leave-requests',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-100',
+    permission: 'hr:leave:read',
   },
   {
     title: 'Divisi',
@@ -78,6 +108,28 @@ const hrModules = [
     color: 'text-teal-600',
     bgColor: 'bg-teal-100',
     permission: 'hr:work-location:read',
+  },
+];
+
+// HR Management modules (for managers/HR staff)
+const hrManagementModules = [
+  {
+    title: 'Manajemen Kehadiran',
+    description: 'Kelola semua data kehadiran',
+    icon: ClipboardList,
+    href: '/hr/attendance/all',
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-100',
+    permission: 'hr:attendance:read',
+  },
+  {
+    title: 'Persetujuan Cuti',
+    description: 'Setujui atau tolak pengajuan cuti',
+    icon: CheckCircle,
+    href: '/hr/leave-requests/approvals',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-100',
+    permission: 'hr:leave:approve',
   },
 ];
 
@@ -282,98 +334,224 @@ function ContractExpirySection() {
   );
 }
 
+// Quick Stats Section Component
+function QuickStatsSection() {
+  const [attendanceStats, setAttendanceStats] = useState<AttendanceStatistics | null>(null);
+  const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setIsLoading(true);
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const year = now.getFullYear();
+
+        const [attendanceResponse, leaveResponse] = await Promise.all([
+          attendanceApi.getMyStatistics(month, year).catch(() => null),
+          leaveApi.getBalance().catch(() => null),
+        ]);
+
+        if (attendanceResponse?.success && attendanceResponse.data) {
+          setAttendanceStats(attendanceResponse.data);
+        }
+        if (leaveResponse?.success && leaveResponse.data) {
+          setLeaveBalance(leaveResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching quick stats:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-4">
+              <Skeleton className="h-4 w-20 mb-2" />
+              <Skeleton className="h-8 w-12" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Attendance Stats */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <span className="text-sm">Hadir Bulan Ini</span>
+          </div>
+          <p className="text-2xl font-bold">{attendanceStats?.presentDays ?? '-'}</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <Clock className="h-4 w-4 text-yellow-600" />
+            <span className="text-sm">Terlambat</span>
+          </div>
+          <p className="text-2xl font-bold">{attendanceStats?.lateDays ?? '-'}</p>
+        </CardContent>
+      </Card>
+
+      {/* Leave Balance */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <Calendar className="h-4 w-4 text-indigo-600" />
+            <span className="text-sm">Sisa Cuti Tahunan</span>
+          </div>
+          <p className="text-2xl font-bold">{leaveBalance?.annualLeaveBalance ?? '-'}</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <Heart className="h-4 w-4 text-red-600" />
+            <span className="text-sm">Sisa Cuti Sakit</span>
+          </div>
+          <p className="text-2xl font-bold">{leaveBalance?.sickLeaveBalance ?? '-'}</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function HrPage() {
   return (
-    <div className="space-y-8">
-      {/* Header */}
+    <div className="space-y-6">
+      {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">HR Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard HR</h1>
         <p className="text-muted-foreground">
           Kelola sumber daya manusia perusahaan
         </p>
       </div>
 
+      {/* Today's Attendance - Quick Clock In/Out */}
+      <PermissionGate permissions={['hr:attendance:read']}>
+        <section>
+          <h2 className="text-lg font-semibold mb-4">Kehadiran Hari Ini</h2>
+          <ClockInOutCard />
+        </section>
+      </PermissionGate>
+
+      {/* Pending Approvals for Managers */}
+      <PermissionGate permissions={['hr:leave:approve']}>
+        <section>
+          <h2 className="text-lg font-semibold mb-4">Menunggu Persetujuan</h2>
+          <PendingApprovalsCard />
+        </section>
+      </PermissionGate>
+
+      {/* Quick Stats Grid */}
+      <section>
+        <h2 className="text-lg font-semibold mb-4">Ringkasan Bulan Ini</h2>
+        <QuickStatsSection />
+      </section>
+
       {/* Employee Statistics */}
       <PermissionGate permissions={['hr:employee:read']}>
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Statistik Karyawan</h2>
-            <Link
-              href="/hr/employees"
-              className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
-            >
-              Lihat Semua
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
+        <section>
+          <h2 className="text-lg font-semibold mb-4">Statistik Karyawan</h2>
           <EmployeeStats />
         </section>
       </PermissionGate>
 
       {/* Contract Expiry Alerts */}
       <PermissionGate permissions={['hr:employee:read']}>
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Peringatan Kontrak</h2>
+        <section>
+          <h2 className="text-lg font-semibold mb-4">Peringatan Kontrak</h2>
           <ContractExpirySection />
         </section>
       </PermissionGate>
 
       {/* Quick Actions */}
-      <PermissionGate permissions={['hr:employee:create']}>
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Aksi Cepat</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Link href="/hr/employees/create">
-              <Card className="h-full transition-all hover:shadow-md hover:scale-[1.02] hover:border-primary cursor-pointer">
-                <CardContent className="flex items-center gap-4 p-6">
-                  <div className="p-3 rounded-full bg-blue-100">
-                    <UserPlus className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Tambah Karyawan Baru</p>
-                    <p className="text-sm text-muted-foreground">
-                      Daftarkan karyawan baru ke sistem
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link href="/hr/organization">
-              <Card className="h-full transition-all hover:shadow-md hover:scale-[1.02] hover:border-primary cursor-pointer">
-                <CardContent className="flex items-center gap-4 p-6">
-                  <div className="p-3 rounded-full bg-green-100">
-                    <Network className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Struktur Organisasi</p>
-                    <p className="text-sm text-muted-foreground">
-                      Lihat hierarki organisasi
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
-        </section>
-      </PermissionGate>
+      <section>
+        <h2 className="text-lg font-semibold mb-4">Aksi Cepat</h2>
+        <div className="flex gap-4 flex-wrap">
+          <PermissionGate permissions={['hr:employee:create']}>
+            <Button asChild>
+              <Link href="/hr/employees/create">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Tambah Karyawan
+              </Link>
+            </Button>
+          </PermissionGate>
+          <PermissionGate permissions={['hr:leave:create']}>
+            <Button variant="outline" asChild>
+              <Link href="/hr/leave-requests/create">
+                <CalendarPlus className="h-4 w-4 mr-2" />
+                Ajukan Cuti
+              </Link>
+            </Button>
+          </PermissionGate>
+          <PermissionGate permissions={['hr:organization:read']}>
+            <Button variant="outline" asChild>
+              <Link href="/hr/organization">
+                <Network className="h-4 w-4 mr-2" />
+                Struktur Organisasi
+              </Link>
+            </Button>
+          </PermissionGate>
+        </div>
+      </section>
 
-      {/* HR Modules Navigation */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Modul HR</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* HR Management Modules (for managers/HR staff) */}
+      <section>
+        <h2 className="text-lg font-semibold mb-4">Manajemen HR</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {hrManagementModules.map((module) => (
+            <PermissionGate key={module.href} permissions={[module.permission]}>
+              <Link href={module.href}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <CardHeader className="pb-2">
+                    <div className={`w-10 h-10 rounded-lg ${module.bgColor} flex items-center justify-center mb-2`}>
+                      <module.icon className={`h-5 w-5 ${module.color}`} />
+                    </div>
+                    <CardTitle className="text-base">{module.title}</CardTitle>
+                    <CardDescription className="text-sm">
+                      {module.description}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            </PermissionGate>
+          ))}
+        </div>
+      </section>
+
+      {/* HR Modules Navigation Grid */}
+      <section>
+        <h2 className="text-lg font-semibold mb-4">Modul HR</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {hrModules.map((module) => (
             <PermissionGate key={module.href} permissions={[module.permission]}>
               <Link href={module.href}>
-                <Card className="h-full transition-all hover:shadow-md hover:scale-[1.02] hover:border-primary cursor-pointer">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{module.title}</CardTitle>
-                    <div className={`p-2 rounded-full ${module.bgColor}`}>
-                      <module.icon className={`h-4 w-4 ${module.color}`} />
+                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <CardHeader className="pb-2">
+                    <div className={`w-10 h-10 rounded-lg ${module.bgColor} flex items-center justify-center mb-2`}>
+                      <module.icon className={`h-5 w-5 ${module.color}`} />
                     </div>
+                    <CardTitle className="text-base">{module.title}</CardTitle>
+                    <CardDescription className="text-sm">
+                      {module.description}
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <CardDescription>{module.description}</CardDescription>
-                  </CardContent>
                 </Card>
               </Link>
             </PermissionGate>
